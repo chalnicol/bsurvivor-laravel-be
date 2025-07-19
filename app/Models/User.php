@@ -68,6 +68,8 @@ class User extends Authenticatable
         $userName = $this->name ?? $this->email; // Assuming 'name' column exists, otherwise use email
 
         // Send your custom Mailable
-        Mail::to($userEmail)->send(new PasswordResetMail($token, $userEmail, $userName));
+        // Mail::to($userEmail)->send(new PasswordResetMail($token, $userEmail, $userName));
+        Mail::to($userEmail)->queue(new PasswordResetMail($token, $userEmail, $userName));
+
     }
 }

@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\ProfileController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -20,8 +21,12 @@ Route::post('/reset-password', [ResetPasswordController::class, 'reset'])->name(
 // Protected routes (require authentication with Sanctum)
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/user', [AuthController::class, 'user']); // Get authenticated user's details
 
+    Route::get('/user', [AuthController::class, 'user']); // Get authenticated user's details
+    Route::put('/user/profile', [ProfileController::class, 'updateProfile']);
+    Route::put('/user/password', [ProfileController::class, 'updatePassword']);
+    Route::delete('/user', [ProfileController::class, 'deleteAccount']);
+    
     // Add your basketball survivor application API routes here, e.g.:
     // Route::resource('leagues', LeagueController::class);
     // Route::post('leagues/{league}/join', [LeagueController::class, 'join']);

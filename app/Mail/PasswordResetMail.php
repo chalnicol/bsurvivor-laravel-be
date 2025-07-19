@@ -52,7 +52,8 @@ class PasswordResetMail extends Mailable
         //     view: 'view.name',
         // );
         return new Content(
-            markdown: 'emails.password-reset', // Use a Blade Markdown view
+            // markdown: 'emails.password-reset', // Use a Blade Markdown view
+            view: 'emails.custom-password-reset',
             with: [
                 'resetUrl' => $this->resetUrl,
                 'userName' => $this->userName,
