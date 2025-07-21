@@ -14,13 +14,16 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // User::factory(10)->create();
-
-         $this->call(LeagueSeeder::class);
-         
-         //nba teams..
-         $this->call(NbaTeamsSeeder::class);
-         //pba teams..
-         $this->call(PbaTeamsSeeder::class);
+        // Users
+        $this->call(UserSeeder::class);
+        // Leagues
+        $this->call(LeagueSeeder::class);
+        //nba teams..
+        $this->call(NbaTeamsSeeder::class);
+        //pba teams..
+        $this->call(PbaTeamsSeeder::class);
+        //roles and permissions..
+        $this->call(RolesAndPermissionsSeeder::class);
 
     }
 }

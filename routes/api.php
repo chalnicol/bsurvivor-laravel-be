@@ -27,6 +27,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/user/password', [ProfileController::class, 'updatePassword']);
     Route::delete('/user', [ProfileController::class, 'deleteAccount']);
     
+    // Route::middleware('role:admin')->group(function () {
+    //     Route::get('/users', [UserController::class, 'index']);
+    //     Route::post('/users', [UserController::class, 'store']);
+    //     Route::put('/users/{user}', [UserController::class, 'update']);
+    //     Route::delete('/users/{user}', [UserController::class, 'destroy']);
+    // });
+
+    
     // Add your basketball survivor application API routes here, e.g.:
     // Route::resource('leagues', LeagueController::class);
     // Route::post('leagues/{league}/join', [LeagueController::class, 'join']);

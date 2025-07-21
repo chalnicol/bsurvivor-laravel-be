@@ -55,6 +55,18 @@ class User extends Authenticatable
         ];
     }
 
+     /**
+     * The accessors to append to the model's array form.
+     * This makes 'roles' and 'permissions' available when the user model is converted to an array/JSON.
+     *
+     * @var array
+     */
+    protected $appends = [
+        // 'roles', // Spatie adds roles directly, no need to append.
+        'all_permissions', // Custom accessor to flatten all permissions
+        // 'can_access', // (Optional) For a simple boolean check
+    ];
+
     /**
      * Send the password reset notification.
      *
@@ -71,5 +83,15 @@ class User extends Authenticatable
         // Mail::to($userEmail)->send(new PasswordResetMail($token, $userEmail, $userName));
         Mail::to($userEmail)->queue(new PasswordResetMail($token, $userEmail, $userName));
 
+    }
+
+    /**
+     * Get all permissions of the user, including those from roles.
+     * This consolidates permissions into a single array for easier frontend consumption.
+     */
+    public function getAllPermissionsAttribute()
+    {
+        // Spatie provides this helper to get all permissions directly
+        return $this->getAllPermissions()->pluck('name');
     }
 }

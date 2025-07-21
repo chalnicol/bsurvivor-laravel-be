@@ -14,7 +14,7 @@ class ProfileController extends Controller
         $user = $request->user(); // Get the authenticated user
 
         $request->validate([
-            'username' => ['nullable', 'string', 'max:255', 'unique:users,username,' . $user->id], // Example for username
+            'username' => ['nullable', 'string', 'min:5', 'max:15', 'unique:users,username,' . $user->id], // Example for username
             'email' => ['nullable', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id], // Example for email
             // Add other validation rules for fields you allow to be updated
         ]);

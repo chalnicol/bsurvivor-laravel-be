@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource; 
+
 use Illuminate\Http\Request;
 
 use App\Models\User;
+
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -16,7 +19,7 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            'username' => 'required|string|max:255|min:5|unique:users',
+            'username' => 'required|string|max:15|min:5|unique:users',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed', // 'confirmed' checks for password_confirmation field
         ]);
@@ -69,6 +72,9 @@ class AuthController extends Controller
 
     public function user(Request $request)
     {
-        return response()->json($request->user());
+        $user = $request->user()->load('roles.permissions');
+
+        // return response()->json($request->user());
+        return new UserResource($user);
     }
 }
