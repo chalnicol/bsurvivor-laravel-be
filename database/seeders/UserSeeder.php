@@ -29,7 +29,7 @@ class UserSeeder extends Seeder
                 "password" => Hash::make('asdfasdf'), // Use a secure password
                 "email_verified_at" => now(), // Set email as verified
             ],
-           
+            
         ];
 
         foreach ($users as $user) {

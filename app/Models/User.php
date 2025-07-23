@@ -30,6 +30,7 @@ class User extends Authenticatable
         'username',
         'email',
         'password',
+        'is_blocked'
     ];
 
     /**
@@ -40,6 +41,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+    
     ];
 
     /**
@@ -52,6 +54,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_blocked' => 'boolean'
         ];
     }
 
@@ -94,4 +97,11 @@ class User extends Authenticatable
         // Spatie provides this helper to get all permissions directly
         return $this->getAllPermissions()->pluck('name');
     }
+
+    // Optional: Add a helper method
+    public function isBlocked(): bool
+    {
+        return (bool) $this->is_blocked;
+    }
+
 }

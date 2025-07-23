@@ -27,6 +27,8 @@ class RolesAndPermissionsSeeder extends Seeder
         Permission::create(['name' => 'delete users']);
         Permission::create(['name' => 'block users']);
 
+        Permission::create(['name' => 'view resources']);
+
         // Add more permissions as needed  
 
         // Create Roles and assign existing Permissions
@@ -35,6 +37,9 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $editorRole = Role::create(['name' => 'editor']);
         $editorRole->givePermissionTo(['edit challenge', 'edit users']);
+
+        $editorRole = Role::create(['name' => 'spectator']);
+        $editorRole->givePermissionTo(['view resources']);
 
         // $userRole = Role::create(['name' => 'user']);
         // Users might not have any specific permissions by default,

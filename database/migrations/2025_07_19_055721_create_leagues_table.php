@@ -13,9 +13,10 @@ return new class extends Migration
     {
         Schema::create('leagues', function (Blueprint $table) {
             $table->id();
-            $table->string("name");
-            $table->string("fullname");
+            $table->string("name")->unique();
+            $table->string("abbr");
             $table->string("logo")->nullable();
+            $table->string("slug");
             $table->timestamps();
         });
     }

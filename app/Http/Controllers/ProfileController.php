@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Auth; // Import Auth facade
+use App\Http\Resources\UserResource; 
 
 class ProfileController extends Controller
 {
@@ -30,9 +31,11 @@ class ProfileController extends Controller
 
         $user->save();
 
+        $user->load('roles.permissions');
+
         return response()->json([
             'message' => 'Profile updated successfully!',
-            'user' => $user // Return the updated user data
+            'user' => new UserResource($user) // Return the updated user data
         ]);
     }
 

@@ -20,6 +20,7 @@ return new class extends Migration
             $table->boolean('is_public')->default(false); // Whether the challenge is public or private
             $table->date('start_date');
             $table->date('end_date');
+            $table->string('slug');
             $table->timestamps();
         });
     }

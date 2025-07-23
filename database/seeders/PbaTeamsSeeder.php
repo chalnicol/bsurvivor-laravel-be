@@ -6,6 +6,7 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\League; // Make sure to import your League model
 use App\Models\Team;   // Make sure to import your Team model
+use Illuminate\Support\Str;
 
 class PbaTeamsSeeder extends Seeder
 {
@@ -17,75 +18,64 @@ class PbaTeamsSeeder extends Seeder
         //
         $pbaTeams = [
             [
-                'clubname' => "Barangay Ginebra",
-                'nickname' => "San Miguel",
-                'abbr' => "BGY",
+                'name' => "Brgy. Ginebra San Miguel",
+                'abbr' => "BGSM",
                 'logo' => null,
             ],
             [
-                'clubname' => "Blackwater",
-                'nickname' => "Bossing",
+                'name' => "Blackwater Bossing",
                 'abbr' => "BLW",
                 'logo' => null,
             ],
             [
-                'clubname' => "Converge",
-                'nickname' => "FiberXers",
+                'name' => "Converge FiberXers",
                 'abbr' => "CNF",
                 'logo' => null,
             ],
             [
-                'clubname' => "Magnolia",
-                'nickname' => "Hotshots",
+                'name' => 'Magnolia Hotshots',
                 'abbr' => "MAG",
                 'logo' => null,
             ],
             [
-                'clubname' => "Meralco",
-                'nickname' => "Bolts",
+                'name' => "Meralco Bolts",
                 'abbr' => "MER",
                 'logo' => null,
             ],
             [
-                'clubname' => "NLEX",
-                'nickname' => "Road Warriors",
+                'name' => 'NLEX Road Warriors',
                 'abbr' => "NLEX",
                 'logo' => null,
             ],
             [
-                'clubname' => "NorthPort",
-                'nickname' => "Batang Pier",
+                'name' => "NorthPort Batang Pier",
                 'abbr' => "NRP",
                 'logo' => null,
             ],
             [
-                'clubname' => "Phoenix Super LPG",
-                'nickname' => "Fuel Masters",
+                'name' => "Phoenix Super LPG Fuel Masters",
                 'abbr' => "PHX",
                 'logo' => null,
             ],
             [
-                'clubname' => "Rain or Shine",
-                'nickname' => "Elasto Painters",
+                'name' => "Rain or Shine Elasto Painters",
                 'abbr' => "ROS",
                 'logo' => null,
             ],
             [
-                'clubname' => "San Miguel",
-                'nickname' => "Beermen",
+                'name' => "San Miguel Beermen",
                 'abbr' => "SMB",
                 'logo' => null,
             ],
             [
-                'clubname' => "TNT",
-                'nickname' => "Tropang Giga",
+                'name' => "TNT Tropang Giga",
                 'abbr' => "TNT",
                 'logo' => null,
             ],
             // Note: Bay Area Dragons was a guest team, typically not included in core league seeders
         ];
 
-        $pbaLeague = League::where('name', 'PBA')->first();
+        $pbaLeague = League::where('abbr', 'PBA')->first();
 
         // IMPORTANT: If the league isn't found for some reason, handle it.
         // This indicates a seeding order issue or a typo.
@@ -101,10 +91,9 @@ class PbaTeamsSeeder extends Seeder
                     'league_id' => $pbaLeague->id
                 ],
                 [
-                    'clubname' => $team['clubname'],
-                    'nickname' => $team['nickname'], // Using name as nickname for simplicity, adjust if you have actual nicknames
+                    'name' => $team['name'],
                     'logo' => $team['logo'],
-                    //'conference' => $team['conference'], // Add conference if you have this column
+                    'slug' => Str::slug($team['name'])
                 ]
             );
         }

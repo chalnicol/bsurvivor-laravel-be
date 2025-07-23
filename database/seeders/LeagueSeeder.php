@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\League; // Make sure to import your League model
+use Illuminate\Support\Str;
 
 class LeagueSeeder extends Seeder
 {
@@ -16,13 +17,13 @@ class LeagueSeeder extends Seeder
         //
         $leagues = [
             [
-                "name" => "NBA",
-                "fullname" => "National Basketball Association",
+                "abbr" => "NBA",
+                "name" => "National Basketball Association",
                 "logo" => ""
             ],
             [
-                "name" => "PBA",
-                "fullname" => "Philippine Basketball Association",
+                "abbr" => "PBA",
+                "name" => "Philippine Basketball Association",
                 "logo" => ""
             ],
         ];
@@ -33,8 +34,9 @@ class LeagueSeeder extends Seeder
                     'name' => $league['name'],
                 ],
                 [
-                    'fullname' => $league['fullname'],
+                    'abbr' => $league['abbr'],
                     'logo' => $league['logo'],
+                    'slug' => Str::slug($league['name'])
                 ]
             );
         }

@@ -47,6 +47,15 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
+        $user = User::where('email', $request->email)->first();
+
+        // Check if user exists and is blocked FIRST
+        if ($user && $user->isBlocked()) {
+            return response()->json([
+                'message' => 'Your account has been blocked. Please contact support.'
+            ], 403); // 403 Forbidden
+        }
+
         if (!Auth::attempt($request->only('email', 'password'))) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials do not match our records.'],
