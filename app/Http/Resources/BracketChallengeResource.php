@@ -5,7 +5,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class TeamResource extends JsonResource
+class BracketChallengeResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -14,20 +14,19 @@ class TeamResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // return parent::toArray($request);
+        //return parent::toArray($request);
+
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'abbr' => $this->abbr,
-            'logo' => $this->logo,
-            'slug' =>  $this->slug,    
-            'conference' => $this->conference,
+            'slug' => $this->slug,
+            'description' => $this->description,
+            'is_public' => $this->is_public,
+            'start_date' => $this->start_date->toDateString(), // Format date
+            'end_date' => $this->end_date->toDateString(),     // Format date
             'league_id' => $this->league_id,
             'league' => $this->whenLoaded('league', $this->league->abbr),
-            // 'league' => new LeagueResource($this->whenLoaded('league')),
-            // 'seed' => $this->whenPivotLoaded('bracket_challenge_team', function () {
-            //     return $this->pivot->seed;
-            // }),
+            'bracket_data' => $this->bracket_data,
         ];
     }
 }

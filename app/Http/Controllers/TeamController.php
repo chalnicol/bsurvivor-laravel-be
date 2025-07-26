@@ -11,18 +11,32 @@ class TeamController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
-        $teams = Team::with('league')->get(); // Eager load the league relationship
-        // $teams = Team::with('league') // Still eager load for the resource transformation
-        //     ->join('leagues', 'teams.league_id', '=', 'leagues.id') // Join with the leagues table
-        //     ->orderBy('leagues.name', 'asc') // Order by the name column in the leagues table
-        //     ->orderBy('teams.conference', 'asc') // Keep your secondary order by conference
-        //     ->select('teams.*') // IMPORTANT: Select all columns from the teams table to avoid conflicts
-        //     ->get();
+        // Get the search term from the request
+        $searchTerm = $request->query('search');
+        
+        // Define how many items per page
+        $perPage = 10; // You can make this configurable or pass it from the frontend
+
+        $query = Team::query();
+
+        // Apply search filter if a search term is provided
+        if ($searchTerm) {
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('name', 'LIKE', '%' . $searchTerm . '%')
+                  ->orWhere('abbr', 'LIKE', '%' . $searchTerm . '%')
+                  ->orWhere('conference', 'LIKE', '%' . $searchTerm . '%');
+                // You can add more columns to search here, e.g.:
+                // ->orWhere('league', 'LIKE', '%' . $searchTerm . '%');
+            });
+        }
+
+        // Paginate the results
+        $teams = $query->paginate($perPage);
 
         return TeamResource::collection($teams);
+
     }
 
     /**
@@ -44,10 +58,12 @@ class TeamController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Team $team)
+    public function show($slug)
     {
-        //
+        $team = Team::where('slug', $slug)->firstOrFail();
+
         $team->load('league'); // Load league for a single team
+
         return new TeamResource($team);
     }
 

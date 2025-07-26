@@ -2,17 +2,45 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\BracketChallenge;
+
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
+use App\Models\BracketChallenge;
+use App\Models\League;
+use App\Models\Team;
+use App\Models\Round;
+use App\Models\Matchup;
+use App\Http\Resources\BracketChallengeResource;
 
 class BracketChallengeController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request) // Inject Request
     {
-        //
+        $query = BracketChallenge::with('league');
+
+        // Example: Only show public challenges by default
+        $query->where('is_public', true);
+
+        // // Example: Allow filtering by league_id from query parameters
+        // if ($request->has('league_id')) {
+        //     $query->where('league_id', $request->input('league_id'));
+        // }
+
+        // Example: Allow searching by name
+        if ($request->has('search')) {
+            $query->where('name', 'like', '%' . $request->input('search') . '%');
+        }
+
+        // Pagination: This will automatically wrap the results in a 'data' array
+        // and include 'meta' and 'links' for pagination information.
+        $bracketChallenges = $query->paginate(15); // Paginate with 15 items per page
+
+        // Return a collection of resources, which automatically handles pagination wrapping
+        return BracketChallengeResource::collection($bracketChallenges);
     }
 
     /**
@@ -28,7 +56,100 @@ class BracketChallengeController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        // Step 1: Validate the 'league' field first to get the league_id
+        $request->validate([
+            'league' => 'required|string|exists:leagues,abbr',
+        ]);
+
+        // Retrieve the selected league based on the ID
+        // $selectedLeague = League::find($request->input('league'));
+        $selectedLeague = League::where('abbr', $request->input('league'))->firstOrFail();
+
+        // Define initial rules for the other fields
+        $rules = [
+            // 'name' => 'required|string|max:255|unique:bracket_challenge,name,' . $bracketChallenge->id,
+            'name' => 'required|string|max:255|unique:bracket_challenge,name',
+            'description' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:255',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date',
+            'is_public' => 'boolean',
+        ];
+
+
+        // Step 2: Conditionally define rules for 'teams'
+    
+        if ($selectedLeague && $selectedLeague->abbr === 'NBA') {
+            $rules['bracket_data.teams'] = 'required|array';
+            $rules['bracket_data.teams.east'] = 'required|array|size:8'; // Must have at least one East team
+            $rules['bracket_data.teams.west'] = 'required|array|size:8'; // Must have at least one West team
+            $rules['bracket_data.teams.east.*'] = [
+                'required',
+                'integer',
+                Rule::exists('teams', 'id')->where(function ($query) {
+                    $query->where('conference', 'East');
+                })
+            ];
+            $rules['bracket_data.teams.west.*'] = [
+                'required',
+                'integer',
+                Rule::exists('teams', 'id')->where(function ($query) {
+                    $query->where('conference', 'West');
+                })
+            ];
+        } else {
+            // If not NBA, 'teams' is a simple array of IDs
+            $rules['bracket_data.teams'] = 'required|array|size:8'; // will check..
+            $rules['bracket_data.teams.*'] = 'required|integer|exists:teams,id';
+        }
+
+        
+        $customMessages = [
+            'bracket_data.teams.east.required' => 'East conference teams are required.',
+            'bracket_data.teams.east.size' => 'You must select exactly 8 East conference teams.',
+            'bracket_data.teams.east.*.exists' => 'Please select a valid East conference team.',
+            'bracket_data.teams.west.required' => 'West conference teams are required.',
+            'bracket_data.teams.west.size' => 'You must select exactly 8 West conference teams',
+            'bracket_data.teams.west.*.exists' => 'Please select a valid West conference team.',
+            'bracket_data.teams.required' => 'Teams are required.',
+            'bracket_data.teams.size' => 'You must select exactly 8 teams.',
+            'bracket_data.teams.*.exists' => 'Please select a valid team.',
+            // ... define messages for other rules and fields ...
+        ];
+            
+        // Apply all the rules
+        // $validated = $request->validate(array_merge($rules, $teamRules));
+        $validated = $request->validate($rules, $customMessages);
+
+
+        // --- Start Saving Logic with Pivot Table ---
+
+        // 1. Create the new BracketChallenge record
+        $bracketChallenge = BracketChallenge::create([
+            'league_id' =>  $selectedLeague->id ,
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+            'is_public' => $validated['is_public'] ?? false,
+            'start_date' => $validated['start_date'],
+            'end_date' => $validated['end_date'],
+            'slug' => Str::slug($validated['name']), // Ensure slug is generated
+        ]);
+
+        //create bracket_data
+        if ($bracketChallenge) {
+            $this->createBracketData($bracketChallenge->id, $selectedLeague->abbr, $validated['bracket_data']);
+        }
+
+        // Eager load relationships for the resource response, including pivot data
+        //$bracketChallenge->load('league');
+        // return new BracketChallengeResource($bracketChallenge);
+
+        return response()->json([
+            'message' => 'Challenge created successfully!',
+            'challenge' => new BracketChallengeResource($bracketChallenge)
+        ]);
+        
     }
 
     /**
@@ -37,6 +158,8 @@ class BracketChallengeController extends Controller
     public function show(BracketChallenge $bracketChallenge)
     {
         //
+        $bracketChallenge->load('league');
+        return new BracketChallengeResource($bracketChallenge);
     }
 
     /**
@@ -45,6 +168,8 @@ class BracketChallengeController extends Controller
     public function edit(BracketChallenge $bracketChallenge)
     {
         //
+        $bracketChallenge->load('league');
+        return new BracketChallengeResource($bracketChallenge);
     }
 
     /**
@@ -61,5 +186,105 @@ class BracketChallengeController extends Controller
     public function destroy(BracketChallenge $bracketChallenge)
     {
         //
+    }
+
+    public function create_initial_nba_matchups (int $roundId, array $teams) {
+
+        if ( count($teams) !== 8 ) return [];
+
+        $matchupBasis = [
+            [0, 7],
+            [3, 4],
+            [2, 5],
+            [1, 6],
+        ];
+
+        foreach ( $matchupBasis as $key => $matchup ) {
+
+           $teamId_1 = $teams[$matchup[0]];
+           $teamId_2 = $teams[$matchup[1]];
+
+           $newMatchup = Matchup::create([
+                'round_id' => $roundId,
+                'wins_team_1' => 0,
+                'wins_team_2' => 0,
+                'winner_team_id' => null,
+                'index' => $key,
+            ]);
+            
+            if ( $newMatchup ) {
+                $newMatchup->teams()->attach($teamId_1, [
+                    'seed' => $matchup[0] + 1,
+                    'slot' => 1,
+                ]);
+                $newMatchup->teams()->attach($teamId_2, [
+                    'seed' => $matchup[1] + 1,
+                    'slot' => 2
+                ]); 
+            }
+
+        }
+
+    }
+
+    public function create_empty_matchups (int $bracketId, int $order) {
+
+        $count = $order == 2 ? 2 : 1;
+
+        for ( $i = 0; $i < $count; $i++ ) {
+            $newMatchup = Matchup::create([
+                'round_id' => $bracketId,
+                'wins_team_1' => 0,
+                'wins_team_2' => 0,
+                'winner_team_id' => null,
+                'index' => $i,
+            ]);
+        }
+    }
+
+    public function createBracketData(int $bracketId, string $leagueName, array $teams ) 
+    {
+
+        //create 
+        if ( $leagueName === 'NBA' ) {
+
+            //create rounds for each conference 
+            foreach ( $teams as $key => $team ) {
+                for ( $i = 0; $i < 3; $i++ ) {
+                    $newRound = Round::create([
+                        'conference' => $key,
+                        'order' => $i + 1,
+                        'bracket_challenge_id' => $bracketId,
+                    ]);
+
+                    //create initial matchups on round 1
+                    if ( $newRound ) {
+                        if ( $i == 0 ) {
+                            //..
+                            $this->create_initial_nba_matchups($newRound->id, $team);
+                        }else {
+                            //
+                            $this->create_empty_matchups($newRound->id, $newRound->order);
+                        }
+                    }
+                }
+            }
+
+            //create finals round.
+            $finalRound = Round::create([
+                'conference' => null,
+                'order' => 4,
+                'bracket_challenge_id' => $bracketId,
+            ]);
+
+            if ( $finalRound ) {
+                $this->create_empty_matchups($finalRound->id, $finalRound->order);
+            }
+
+        }else {
+            //todo for pba or non-nba leagues..
+        }
+        
+        
     }
 }

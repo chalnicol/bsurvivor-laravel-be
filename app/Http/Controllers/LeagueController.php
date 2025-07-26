@@ -9,23 +9,38 @@ use App\Http\Resources\LeagueResource;
 class LeagueController extends Controller
 {
     //
-    public function index()
+    public function index(Request $request)
     {
-        //
-        // return response()->json(League::all());
+        
+        // Get the search term from the request
+        $searchTerm = $request->query('search');
+        
+        // Define how many items per page
+        $perPage = 10; // You can make this configurable or pass it from the frontend
 
-        $leagues = League::all();
-        // Return a collection of TeamResource
-        return LeagueResource::collection($leagues);
+        $query = League::query();
+
+        // Apply search filter if a search term is provided
+        if ($searchTerm) {
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('name', 'LIKE', '%' . $searchTerm . '%')
+                  ->orWhere('abbr', 'LIKE', '%' . $searchTerm . '%');
+            });
+        }
+
+        // Paginate the results
+        $teams = $query->paginate($perPage);
+
+        return LeagueResource::collection($teams);
     }
 
     /**
      * Show the form for creating a new resource.
      */
-    public function show(string $slug)
+    public function show(Team $team)
     {
         //
-        $team = League::where('slug', $slug)->first();
+        //$team = League::where('slug', $slug)->first();
 
         if (!$team) {
             return response()->json(['message' => 'Team not found'], 404);

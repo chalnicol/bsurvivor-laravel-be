@@ -10,6 +10,8 @@ use App\Http\Controllers\LeagueController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\AdminPageController;
+use App\Http\Controllers\BracketChallengeController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -33,15 +35,24 @@ Route::middleware(['auth:sanctum', 'user.blocked'])->group(function () {
     
     Route::group(['middleware' => ['role:admin']], function () {
 
+
         Route::get('/admin/leagues', [LeagueController::class, 'index']);
-        Route::get('/admin/leagues/{slug}', [LeagueController::class, 'show']);
+        Route::get('/admin/leagues/{league}', [LeagueController::class, 'show']);
+
+        Route::get('/admin/totals', [AdminPageController::class, 'index']);
+        Route::get('/admin/teams_and_leagues', [AdminPageController::class, 'getTeamsAndLeagues']);
 
         Route::get('/admin/users', [UserController::class, 'index']);
         Route::get('/admin/users/{user}', [UserController::class, 'show']);
         Route::patch('/admin/users/{user}/toggleBlock', [UserController::class, 'toggleBlockUser']);
         Route::patch('/admin/users/{user}/updateRoles', [UserController::class, 'updateUserRoles']);
 
+        Route::get('/admin/bracket-challenges', [BracketChallengeController::class, 'index']);
+        Route::get('/admin/bracket-challenges/{challenge}', [BracketChallengeController::class, 'show']);
+        Route::post('/admin/bracket-challenges', [BracketChallengeController::class, 'store']);
+        
         Route::get('/admin/teams', [TeamController::class, 'index']);
+        Route::get('/admin/teams/{slug}', [TeamController::class, 'show']);
 
         Route::get('/admin/roles', [RoleController::class, 'getAllRoles']);
         Route::get('/admin/roles-with-permissions', [RoleController::class, 'getAllRolesWithPermissions']);

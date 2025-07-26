@@ -12,12 +12,30 @@ class UserController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
-        $users = User::with('roles.permissions')->get();
+  
+         // Get the search term from the request
+        $searchTerm = $request->query('search');
+        
+        // Define how many items per page
+        $perPage = 10; // You can make this configurable or pass it from the frontend
+
+        $query = User::query();
+
+        // Apply search filter if a search term is provided
+        if ($searchTerm) {
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('username', 'LIKE', '%' . $searchTerm . '%')
+                  ->orWhere('email', 'LIKE', '%' . $searchTerm . '%');
+            });
+        }
+
+        // Paginate the results
+        $users = $query->with('roles.permissions')->paginate($perPage);
 
         return UserResource::collection($users);
+
     }
 
     /**
