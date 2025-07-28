@@ -35,9 +35,12 @@ Route::middleware(['auth:sanctum', 'user.blocked'])->group(function () {
     
     Route::group(['middleware' => ['role:admin']], function () {
 
-
         Route::get('/admin/leagues', [LeagueController::class, 'index']);
         Route::get('/admin/leagues/{league}', [LeagueController::class, 'show']);
+        Route::post('/admin/leagues', [LeagueController::class, 'store']);
+        Route::get('/admin/leagues/{league}/edit', [LeagueController::class, 'edit']);
+        Route::put('/admin/leagues/{league}', [LeagueController::class, 'update']);
+        Route::delete('/admin/leagues/{league}', [LeagueController::class, 'destroy']);
 
         Route::get('/admin/totals', [AdminPageController::class, 'index']);
         Route::get('/admin/teams_and_leagues', [AdminPageController::class, 'getTeamsAndLeagues']);
@@ -48,11 +51,18 @@ Route::middleware(['auth:sanctum', 'user.blocked'])->group(function () {
         Route::patch('/admin/users/{user}/updateRoles', [UserController::class, 'updateUserRoles']);
 
         Route::get('/admin/bracket-challenges', [BracketChallengeController::class, 'index']);
-        Route::get('/admin/bracket-challenges/{challenge}', [BracketChallengeController::class, 'show']);
+        Route::get('/admin/bracket-challenges/{bracketChallenge}', [BracketChallengeController::class, 'show']);
+        Route::get('/admin/bracket-challenges/{bracketChallenge}/edit', [BracketChallengeController::class, 'edit']);
         Route::post('/admin/bracket-challenges', [BracketChallengeController::class, 'store']);
-        
+        Route::put('/admin/bracket-challenges/{bracketChallenge}', [BracketChallengeController::class, 'update']);
+        Route::delete('/admin/bracket-challenges/{bracketChallenge}', [BracketChallengeController::class, 'destroy']);
+
         Route::get('/admin/teams', [TeamController::class, 'index']);
-        Route::get('/admin/teams/{slug}', [TeamController::class, 'show']);
+        Route::get('/admin/teams/{team}', [TeamController::class, 'show']);
+        Route::get('/admin/teams/{team}/edit', [TeamController::class, 'edit']);
+        Route::post('/admin/teams', [TeamController::class, 'store']);
+        Route::put('/admin/teams/{team}', [TeamController::class, 'update']);
+        Route::delete('/admin/teams/{team}', [TeamController::class, 'destroy']);
 
         Route::get('/admin/roles', [RoleController::class, 'getAllRoles']);
         Route::get('/admin/roles-with-permissions', [RoleController::class, 'getAllRolesWithPermissions']);

@@ -13,10 +13,11 @@ return new class extends Migration
     {
         Schema::create('bracket_challenge', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('league_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('league_id')->nullable()->constrained()->onDelete('cascade');
             $table->string('name')->unique();
             $table->string('description')->nullable();
             $table->boolean('is_public')->default(false); // Whether the challenge is public or private
+            $table->json('bracket_data')->nullable();
             $table->date('start_date');
             $table->date('end_date');
             $table->string('slug')->unique();

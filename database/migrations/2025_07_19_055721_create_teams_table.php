@@ -13,14 +13,13 @@ return new class extends Migration
     {
         Schema::create('teams', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('league_id')->nullable()->constrained()->onDelete("set null");
-            $table->string("name");
+            $table->foreignId('league_id')->nullable()->constrained()->onDelete("cascade");
+            $table->string("name")->unique();
             $table->string("abbr");
             $table->string("logo")->nullable();    
             $table->string("conference")->nullable();   
-            $table->string("slug"); 
+            $table->string("slug")->unique(); 
             $table->timestamps();
-
             $table->unique(['abbr', 'league_id']);
         });
     }

@@ -22,7 +22,7 @@ class AdminPageController extends Controller
             'totals' => [
                 'leagueTotal' => League::count(),
                 'userTotal' => User::count(),
-                // 'bracketChallengeTotal' => BracketChallenge::count(),
+                'bracketChallengeTotal' => BracketChallenge::count(),
                 'teamTotal' => Team::count(),
             ],
         ]); 

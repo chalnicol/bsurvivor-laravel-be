@@ -5,7 +5,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class LeagueResource extends JsonResource
+class RoundResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -15,13 +15,13 @@ class LeagueResource extends JsonResource
     public function toArray(Request $request): array
     {
         // return parent::toArray($request);
+        
         return [
             'id' => $this->id,
-            'name' => $this->name,
-            'abbr' => $this->abbr,
-            'logo' => $this->logo,
-            'slug' =>  $this->slug,          
-            'teams' => TeamResource::collection($this->whenLoaded('teams')),
+            'conference' => $this->conference,
+            'order' => $this->order,
+            'matchups' => MatchupResource::collection($this->whenLoaded('matchups')), // Load matchups here
         ];
+
     }
 }

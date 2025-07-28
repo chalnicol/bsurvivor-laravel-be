@@ -15,7 +15,32 @@ class TeamResource extends JsonResource
     public function toArray(Request $request): array
     {
         // return parent::toArray($request);
-        return [
+
+        // return [
+        //     'id' => $this->id,
+        //     'name' => $this->name,
+        //     'abbr' => $this->abbr,
+        //     'logo' => $this->logo,
+        //     'slug' =>  $this->slug,    
+        //     'conference' => $this->conference,
+        //     'league_id' => $this->league_id,
+        //     'league' => $this->whenLoaded('league', $this->league->abbr),
+        //     // 'league' => new LeagueResource($this->whenLoaded('league')),
+        //     // 'seed' => $this->whenPivotLoaded('bracket_challenge_team', function () {
+        //     //     return $this->pivot->seed;
+        //     // }),
+        // ];
+        
+        $pivotData = [];
+        if (isset($this->pivot)) {
+            $pivotData = [
+                'slot' => $this->pivot->slot,
+                'seed' => $this->pivot->seed,
+                // Add other pivot data if needed, like $this->pivot->score, etc.
+            ];
+        }
+        
+        return array_merge([
             'id' => $this->id,
             'name' => $this->name,
             'abbr' => $this->abbr,
@@ -24,10 +49,9 @@ class TeamResource extends JsonResource
             'conference' => $this->conference,
             'league_id' => $this->league_id,
             'league' => $this->whenLoaded('league', $this->league->abbr),
-            // 'league' => new LeagueResource($this->whenLoaded('league')),
-            // 'seed' => $this->whenPivotLoaded('bracket_challenge_team', function () {
-            //     return $this->pivot->seed;
-            // }),
-        ];
+            // Add any other team attributes you want
+        ], $pivotData);
+
+        
     }
 }
