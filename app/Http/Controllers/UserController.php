@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Http\Resources\UserResource;
 use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -119,16 +120,31 @@ class UserController extends Controller
         if (!$role) {
             return response()->json(['message' => 'Role not found'], 404);
         }
+
+        $message = "";
+
         if ($user->hasRole($request->role)) {
+
+            if ( $role->name === 'admin' && $user->id === Auth::id()) {
+                return response()->json([
+                    'message' => 'You cannot remove your own admin role.'
+                ], 403);
+            }
+
             $user->removeRole($request->role);
+
+            $message = ucfirst($request->role) . ' role removed successfully!';
+
         } else {
             $user->assignRole($request->role);
+            
+            $message = ucfirst($request->role) . ' role assigned successfully!';
         }
 
         $user->load('roles');
 
         return response()->json([
-            'message' => 'User roles updated successfully!',
+            'message' => $message,
             'user' => new UserResource($user) // Or a UserResource of the user
         ]);
             

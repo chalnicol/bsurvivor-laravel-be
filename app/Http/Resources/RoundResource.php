@@ -19,7 +19,8 @@ class RoundResource extends JsonResource
         return [
             'id' => $this->id,
             'conference' => $this->conference,
-            'order' => $this->order,
+            'name' => $this->name,
+            'order_index' => $this->order_index,
             'matchups' => MatchupResource::collection($this->whenLoaded('matchups')), // Load matchups here
         ];
 

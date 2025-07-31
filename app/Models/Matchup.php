@@ -15,18 +15,20 @@ class Matchup extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'name',
+        'matchup_index',
         'wins_team_1',
         'wins_team_2',
         'winner_team_id',
-        'index',
         'round_id',
     ];
 
-    public function round () {
+    public function round () 
+    {
         return $this->belongsTo(Round::class);
     }
 
-     public function teams(): BelongsToMany
+    public function teams()
     {
         return $this->belongsToMany(Team::class)
                     ->withPivot('seed', 'slot') // Include any pivot columns you need
@@ -34,7 +36,7 @@ class Matchup extends Model
     }
 
     // If you want to easily get the winner
-    public function winner(): BelongsTo
+    public function winner()
     {
         return $this->belongsTo(Team::class, 'winner_team_id');
     }

@@ -11,13 +11,12 @@ use App\Models\League;
 use App\Models\Team;
 use App\Http\Resources\BracketChallengeResource;
 
-// use App\Models\Round;
-// use App\Models\Matchup;
-// use App\Traits\BracketChallengeTrait;
+
+use App\Traits\BracketChallengeTrait;
 
 class BracketChallengeController extends Controller
 {
-    // use BracketChallengeTrait;
+    use BracketChallengeTrait;
     //
     /**
      * Display a listing of the resource.
@@ -81,9 +80,7 @@ class BracketChallengeController extends Controller
             'is_public' => 'boolean',
         ];
 
-
         // Step 2: Conditionally define rules for 'teams'
-    
         if ($selectedLeague && $selectedLeague->abbr === 'NBA') {
             $rules['bracket_data.teams'] = 'required|array';
             $rules['bracket_data.teams.east'] = 'required|array|size:8'; // Must have at least one East team
@@ -137,6 +134,12 @@ class BracketChallengeController extends Controller
             'slug' => Str::slug($validated['name']), // Ensure slug is generated
         ]);
 
+        if ( $bracketChallenge ) {
+            $this->create_bracket($bracketChallenge, $validated['bracket_data']['teams']);
+        }
+
+        $bracketChallenge->load('league', 'rounds.matchups.teams');
+
         return response()->json([
             'message' => 'Challenge created successfully!',
             'challenge' => new BracketChallengeResource($bracketChallenge)
@@ -150,7 +153,7 @@ class BracketChallengeController extends Controller
     public function show(BracketChallenge $bracketChallenge)
     {
         //
-        $bracketChallenge->load('league');
+        $bracketChallenge->load('league', 'rounds.matchups.teams');
         
         return new BracketChallengeResource($bracketChallenge);
     }
@@ -171,14 +174,9 @@ class BracketChallengeController extends Controller
      */
     public function update(Request $request, BracketChallenge $bracketChallenge)
     {
-        // Step Validate the 'league' field first to get the league_id
-        $request->validate([
-            'league' => 'required|string|exists:leagues,abbr',
-        ]);
 
         // Retrieve the selected league based on the ID
-        // $selectedLeague = League::find($request->input('league'));
-        $selectedLeague = League::where('abbr', $request->input('league'))->firstOrFail();
+        $selectedLeague = $bracketChallenge->league;
 
         // Define initial rules for the other fields
         $rules = [
@@ -239,7 +237,7 @@ class BracketChallengeController extends Controller
 
         // Create the new BracketChallenge record
         $bracketChallenge->update ([
-            'league_id' =>  $selectedLeague->id ,
+            // 'league_id' =>  $selectedLeague->id ,
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'is_public' => $validated['is_public'] ?? false,
@@ -249,9 +247,12 @@ class BracketChallengeController extends Controller
             'slug' => Str::slug($validated['name']), // Ensure slug is generated
         ]);
 
+        if ($bracketChallenge) {
+            $this->update_bracket($bracketChallenge, $validated['bracket_data']['teams']);
+        }
+
         return response()->json([
             'message' => 'Challenge updated successfully!',
-            'challenge' => new BracketChallengeResource($bracketChallenge)
         ]);
     }
 

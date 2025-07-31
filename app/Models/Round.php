@@ -15,9 +15,10 @@ class Round extends Model
      * @var list<string>
      */
     protected $fillable = [
-     'conference',
-     'order',
-     'bracket_challenge_id'
+        'name',
+        'conference',
+        'order_index',
+        'bracket_challenge_id'
     ];
 
     public function matchups()

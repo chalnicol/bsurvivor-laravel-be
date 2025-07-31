@@ -35,9 +35,9 @@ class BracketChallenge extends Model
         return $this->belongsTo(League::class);
     }
 
-    // public function rounds () {
-    //     return $this->hasMany(Round::class);
-    // }
+    public function rounds () {
+        return $this->hasMany(Round::class);
+    }
 
 
   

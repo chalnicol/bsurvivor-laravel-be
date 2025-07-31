@@ -27,9 +27,9 @@ class BracketChallengeResource extends JsonResource
             'league_id' => $this->league_id,
             'league' => $this->whenLoaded('league', $this->league->abbr),
             'bracket_data' => $this->bracket_data,
-            // 'rounds' => $this->whenLoaded('rounds', function () {
-            //     return RoundResource::collection($this->rounds);
-            // }),'
+            'rounds' => $this->whenLoaded('rounds', function () {
+                return RoundResource::collection($this->rounds);
+            }),
         ];
     }
 }

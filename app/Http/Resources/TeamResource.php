@@ -40,8 +40,8 @@ class TeamResource extends JsonResource
             ];
         }
         
-        return array_merge([
-            'id' => $this->id,
+        $data = [
+             'id' => $this->id,
             'name' => $this->name,
             'abbr' => $this->abbr,
             'logo' => $this->logo,
@@ -49,8 +49,9 @@ class TeamResource extends JsonResource
             'conference' => $this->conference,
             'league_id' => $this->league_id,
             'league' => $this->whenLoaded('league', $this->league->abbr),
-            // Add any other team attributes you want
-        ], $pivotData);
+        ];
+
+        return array_merge($data, $pivotData);
 
         
     }
