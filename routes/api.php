@@ -24,9 +24,14 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
 Route::post('/reset-password', [ResetPasswordController::class, 'reset'])->name('password.update');
 
+Route::get('/bracket-challenges/active', [BracketChallengeController::class, 'fetchActiveChallenges']);
+Route::get('/bracket-challenges/{bracketChallenge}', [BracketChallengeController::class, 'show']);
+
 // Protected routes (require authentication with Sanctum)
 Route::middleware(['auth:sanctum', 'user.blocked'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+
+  
 
     Route::get('/user', [AuthController::class, 'user']); // Get authenticated user's details
     Route::put('/user/profile', [ProfileController::class, 'updateProfile']);

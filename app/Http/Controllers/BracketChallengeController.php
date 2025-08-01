@@ -268,5 +268,23 @@ class BracketChallengeController extends Controller
         ]);
     }
 
+    public function fetchActiveChallenges()
+    {
+       $bracketChallenges = BracketChallenge::with('league')
+                    ->where('is_public', true)
+                    ->orderBy('id', 'desc')
+                    ->get();
+
+        return response()->json([
+            'message' => 'Challenges fetched successfully!',
+            'challenges' => BracketChallengeResource::collection($bracketChallenges)
+        ]);
+    }
+
+        
+
+
+
+
     
 }
