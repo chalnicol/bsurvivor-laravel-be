@@ -6,10 +6,119 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Auth; // Import Auth facade
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
+
 use App\Http\Resources\UserResource; 
+use App\Models\User;
+use App\Models\BracketChallengeEntry;
+use App\Http\Resources\BracketChallengeEntryResource;
 
 class ProfileController extends Controller
 {
+
+    public function get_bracket_challenge_entries () {
+
+        $user = Auth::user();
+        if ( !$user ) {
+            return response()->json([
+                'message' => 'Authentication required.',
+            ]);
+        }
+
+        $bracketChallengeEntries = $user->bracketChallengeEntries()
+            ->with('bracket_challenge')
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        return BracketChallengeEntryResource::collection($bracketChallengeEntries);
+
+        // $groupedEntries = $bracketChallengeEntries->groupBy(function ($entry) {
+        //     // Check if bracket_challenge and league exist to prevent errors
+        //     return optional(optional($entry->bracket_challenge)->league)->abbr;
+        // });
+
+
+        // // 3. Format the grouped data for the JSON response
+        // $formattedGroupedEntries = [];
+        // foreach ($groupedEntries as $leagueName => $entriesCollection) {
+        //     // Skip entries that might not have a league (e.g., if relationship is null)
+        //     if (is_null($leagueName)) {
+        //         continue;
+        //     }
+
+        //     // Get the first entry from the collection to access the league details
+        //     $firstEntryInGroup = $entriesCollection->first();
+        //     $league = optional(optional($firstEntryInGroup->bracket_challenge)->league);
+
+        //     $formattedGroupedEntries[] = [
+        //         'league_id'   => $league->id,
+        //         'league_name' => $league->name,
+        //         // Apply BracketChallengeEntryResource to each entry in this specific league group
+        //         'entries'     => BracketChallengeEntryResource::collection($entriesCollection),
+        //     ];
+        // }
+
+        // // Optional: Sort the leagues by name or ID if desired
+        // // usort($formattedGroupedEntries, function($a, $b) {
+        // //     return $a['league_name'] <=> $b['league_name'];
+        // // });
+
+
+        // return response()->json([
+        //     'message' => 'Bracket Challenge Entries fetched successfully.',
+        //     'leagues' => $formattedGroupedEntries, // Return the grouped data
+        // ]);
+    
+    }
+
+    public function post_bracket_challenge_entry(Request $request) 
+    {
+        $userId = Auth::id();
+
+        $bracketChallengeId = $request->input('bracket_challenge_id');
+
+        $request->validate([
+            'bracket_challenge_id' => [
+                'required',
+                'integer',
+                'exists:bracket_challenges,id',
+                 Rule::unique('bracket_challenge_entries')->where(function ($query) use ($userId, $bracketChallengeId) {
+                    $query->where('user_id', $userId)
+                          ->where('bracket_challenge_id', $bracketChallengeId);
+                })
+            ],
+            'entry_data' => 'required|array',
+        ], [
+            'bracket_challenge_id.unique' => 'You have already submitted an entry for this bracket challenge.',
+        ]);
+
+        
+        $padded_user_id = str_pad(Auth::id(), 5, '0', STR_PAD_LEFT);
+
+        $padded_challenge_id = str_pad($request->bracket_challenge_id, 5, '0', STR_PAD_LEFT);
+
+        $randomString = Str::random(10);
+
+        $name = 'BCE-'. $padded_challenge_id . '-' . $padded_user_id . '-' . Str::upper($randomString);
+
+        $bracketChallengeEntry = BracketChallengeEntry::create([
+            'bracket_challenge_id' => $request->bracket_challenge_id,
+            'entry_data' => $request->entry_data,
+            'user_id' => Auth::id(),
+            'name' => $name,
+            'slug' =>  Str::slug($name),
+        ]);
+
+        // $bracketChallengeEntry->load('bracket_challenge', 'user');
+        $bracketChallengeEntry->load('user');
+
+        return response()->json([
+            'message' => 'Entry created successfully!',
+            'entry' => new BracketChallengeEntryResource($bracketChallengeEntry)
+        ]); 
+    }
+
     public function updateProfile(Request $request)
     {
         $user = $request->user(); // Get the authenticated user

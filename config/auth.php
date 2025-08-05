@@ -40,6 +40,10 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        'sanctum' => [ // Make sure this guard exists
+            'driver' => 'sanctum',
+            'provider' => 'users',
+        ],
     ],
 
     /*

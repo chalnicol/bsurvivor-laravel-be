@@ -11,13 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('bracket_challenge_entry', function (Blueprint $table) {
+        Schema::create('bracket_challenge_entries', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('bracket_challenge_id')->constrained('bracket_challenge')->onDelete('cascade');
+            $table->foreignId('bracket_challenge_id')->constrained('bracket_challenges')->onDelete('cascade');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->string('name');
             $table->json('entry_data')->nullable(); // Store user's entry data in JSON format   
-            $table->boolean('is_winner')->default(false); // Whether the user won the challenge 
+            // $table->boolean('is_winner')->default(false); // Whether the user won the challenge 
+            $table->string('status')->default('pending');
+            $table->string('slug')->unique();
             $table->timestamps();
+
+            $table->unique(['user_id', 'bracket_challenge_id']);
         });
     }
 

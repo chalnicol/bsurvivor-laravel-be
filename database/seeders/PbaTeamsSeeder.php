@@ -18,57 +18,68 @@ class PbaTeamsSeeder extends Seeder
         //
         $pbaTeams = [
             [
-                'name' => "Brgy. Ginebra San Miguel",
+                'fname' => "Brgy. Ginebra",
+                'lname' => "San Miguel",
                 'abbr' => "BGSM",
                 'logo' => null,
             ],
             [
-                'name' => "Blackwater Bossing",
+                'fname' => "Blackwater",
+                'lname' => "Bossing",
                 'abbr' => "BLW",
                 'logo' => null,
             ],
             [
-                'name' => "Converge FiberXers",
+                'fname' => "Converge",
+                'lname' => "FiberXers",
                 'abbr' => "CNF",
                 'logo' => null,
             ],
             [
-                'name' => 'Magnolia Hotshots',
+                'fname' => 'Magnolia',
+                'lname' => 'Hotshots',
                 'abbr' => "MAG",
                 'logo' => null,
             ],
             [
-                'name' => "Meralco Bolts",
+                'fname' => "Meralco",
+                'lname' => "Bolts",
                 'abbr' => "MER",
                 'logo' => null,
             ],
             [
-                'name' => 'NLEX Road Warriors',
+                'fname' => 'NLEX',
+                'lname' => 'Road Warriors',
                 'abbr' => "NLEX",
                 'logo' => null,
             ],
             [
-                'name' => "NorthPort Batang Pier",
-                'abbr' => "NRP",
+                'fname' => "NorthPort",
+                'lname' => "Batang Pier",
+                'abbr' => "NBP",
                 'logo' => null,
             ],
             [
-                'name' => "Phoenix Super LPG Fuel Masters",
+                'fname' => "Phoenix Super LPG",
+                'lname' => "Fuel Masters",
                 'abbr' => "PHX",
                 'logo' => null,
             ],
             [
-                'name' => "Rain or Shine Elasto Painters",
+                'fname' => "Rain or Shine",
+                'lname' => "Elasto Painters",
                 'abbr' => "ROS",
                 'logo' => null,
             ],
             [
-                'name' => "San Miguel Beermen",
+                'fname' => "San Miguel",
+                'lname' => "Beermen",
                 'abbr' => "SMB",
                 'logo' => null,
             ],
             [
-                'name' => "TNT Tropang Giga",
+                'fname' => "TNT",
+                'lname' => "Tropang Giga",
                 'abbr' => "TNT",
                 'logo' => null,
             ],
@@ -91,9 +102,11 @@ class PbaTeamsSeeder extends Seeder
                     'league_id' => $pbaLeague->id
                 ],
                 [
-                    'name' => $team['name'],
+                    'fname' => $team['fname'],
+                    'lname' => $team['lname'],
                     'logo' => $team['logo'],
-                    'slug' => Str::slug($team['name'])
+                    'slug' => Str::slug($team['fname'] . ' ' . $team['lname']),
+                    'abbr' => $team['abbr'],
                 ]
             );
         }

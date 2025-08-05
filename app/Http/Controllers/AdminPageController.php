@@ -7,6 +7,7 @@ use App\Models\League;
 use App\Models\User;
 use App\Models\BracketChallenge;
 use App\Models\Team;
+use App\Models\BracketChallengeEntry;
 
 use App\Http\Resources\LeagueResource;
 use App\Http\Resources\TeamResource;
@@ -23,6 +24,7 @@ class AdminPageController extends Controller
                 'leagueTotal' => League::count(),
                 'userTotal' => User::count(),
                 'bracketChallengeTotal' => BracketChallenge::count(),
+                'bracketChallengeEntryTotal' => BracketChallengeEntry::count(),
                 'teamTotal' => Team::count(),
             ],
         ]); 

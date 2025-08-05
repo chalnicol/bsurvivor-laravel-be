@@ -62,7 +62,8 @@ class TeamController extends Controller
     {
         //
         $rules = [
-            'name' => 'required|string|max:255|unique:teams,name',
+            'fname' => 'required|string|max:255',
+            'lname' => 'required|string|max:255',
             'abbr' => [
                 'required',
                 'string',
@@ -82,9 +83,13 @@ class TeamController extends Controller
 
         // --- Custom Error Messages Array ---
         $messages = [
-            'name.required' => 'The team name is absolutely required. Please provide it.',
-            'name.unique' => 'A team with this name already exists. Choose a different one.',
-            'name.max' => 'The team name cannot exceed 255 characters.',
+            'fname.required' => 'The team first name is absolutely required. Please provide it.',
+            // 'name.unique' => 'A team with this name already exists. Choose a different one.',
+            'fname.max' => 'The team first name cannot exceed 255 characters.',
+
+            'lname.required' => 'The team last name is absolutely required. Please provide it.',
+            // 'name.unique' => 'A team with this name already exists. Choose a different one.',
+            'lname.max' => 'The team last name cannot exceed 255 characters.',
 
             'abbr.required' => 'The team abbreviation is missing.',
             'abbr.max' => 'The abbreviation must be 10 characters or less.',
@@ -99,9 +104,6 @@ class TeamController extends Controller
             'logo.max' => 'The logo file size cannot exceed 2MB.',
 
             'logo_url.url' => 'Please enter a valid URL for the logo.',
-
-            // Messages for the 'sometimes' rules (required_without)
-            // Note: If you're using 'required' as part of 'sometimes', you can define its message here.,
         ];
 
         // 2. Custom Validation Logic (Ensuring ONE of logo or logo_url is present)
@@ -142,12 +144,13 @@ class TeamController extends Controller
         // )
         // 6. Create the team)
         $team = Team::create([
-            'name' => $request->input('name'),
+            'fname' => $request->input('fname'),
+            'lname' => $request->input('lname'),
             'abbr' => $request->input('abbr'),
             'conference' => $request->input('conference') ?? null,
             'league_id' => $league->id,
             'logo' => $logoPath, // This will be null if neither logo nor logo_url was provided
-            'slug' => Str::slug($request->input('name')), // Ensure slug is generated
+            'slug' => Str::slug($request->input('fname') . ' ' . $request->input('lname')), // Ensure slug is generated
         ]);
 
         // 7. Return a successful JSON response
@@ -187,7 +190,9 @@ class TeamController extends Controller
     {
         //
         $rules = [
-            'name' => 'required|string|max:255|unique:teams,name,' . $team->id,
+            // 'fname' => 'required|string|max:255|unique:teams,name,' . $team->id,
+            'fname' => 'required|string|max:255',
+            'lname' => 'required|string|max:255',
             'abbr' => [
                 'required',
                 'string',
@@ -209,9 +214,13 @@ class TeamController extends Controller
 
         // --- Custom Error Messages Array ---
         $messages = [
-            'name.required' => 'The team name is absolutely required. Please provide it.',
-            'name.unique' => 'A team with this name already exists. Choose a different one.',
-            'name.max' => 'The team name cannot exceed 255 characters.',
+            'fname.required' => 'The team name is absolutely required. Please provide it.',
+            // 'fname.unique' => 'A team with this name already exists. Choose a different one.',
+            'fname.max' => 'The team name cannot exceed 255 characters.',
+
+            'lname.required' => 'The team name is absolutely required. Please provide it.',
+            // 'lname.unique' => 'A team with this name already exists. Choose a different one.',
+            'lname.max' => 'The team name cannot exceed 255 characters.',
 
             'abbr.required' => 'The team abbreviation is missing.',
             'abbr.max' => 'The abbreviation must be 10 characters or less.',
@@ -265,12 +274,14 @@ class TeamController extends Controller
         };
 
         $team->update([
-            'name' => $request->input('name'),
+            'fname' => $request->input('fname'),
+            'lname' => $request->input('lname'),
+
             'abbr' => $request->input('abbr'),
             'conference' => $request->input('conference') ?? null,
             'league_id' => $league->id,
             'logo' => $logoPath, // This will be null if neither logo nor logo_url was provided
-            'slug' => Str::slug($request->input('name')), // Ensure slug is generated
+            'slug' => Str::slug($request->input('name') . ' ' . $request->input('lname')), // Ensure slug is generated
         ]);
 
         // 7. Return a successful JSON response

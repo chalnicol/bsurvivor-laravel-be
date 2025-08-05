@@ -14,7 +14,8 @@ return new class extends Migration
         Schema::create('teams', function (Blueprint $table) {
             $table->id();
             $table->foreignId('league_id')->nullable()->constrained()->onDelete("cascade");
-            $table->string("name")->unique();
+            $table->string("fname");
+            $table->string("lname");
             $table->string("abbr");
             $table->string("logo")->nullable();    
             $table->string("conference")->nullable();   

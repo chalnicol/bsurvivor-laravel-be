@@ -42,7 +42,8 @@ class TeamResource extends JsonResource
         
         $data = [
              'id' => $this->id,
-            'name' => $this->name,
+            'fname' => $this->fname,
+            'lname' => $this->lname,
             'abbr' => $this->abbr,
             'logo' => $this->logo,
             'slug' =>  $this->slug,    

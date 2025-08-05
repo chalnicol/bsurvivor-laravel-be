@@ -19,91 +19,106 @@ class NbaTeamsSeeder extends Seeder
         $nbaTeams = [
             // Eastern Conference
             [
-                'name' => "Atlanta Hawks",
+                'fname' => "Atlanta",
+                'lname' => "Hawks",
                 'abbr' => "ATL",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612737/primary/L/logo.svg",
                 'conference' => "EAST"
             ],
             [
-                'name' => "Boston Celtics",
+                'fname' => "Boston",
+                'lname' => "Celtics",
                 'abbr' => "BOS",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612738/primary/L/logo.svg",
                 'conference' => "EAST"
             ],
             [
-                'name' => "Brooklyn Nets",
+                'fname' => "Brooklyn",
+                'lname' => "Nets",
                 'abbr' => "BKN",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612751/primary/L/logo.svg",
                 'conference' => "EAST"
             ],
             [
-                'name' => "Charlotte Hornets",
+                'fname' => "Charlotte",
+                'lname' => "Hornets",
                 'abbr' => "CHA",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612766/primary/L/logo.svg",
                 'conference' => "EAST"
             ],
             [
-                'name' => "Chicago Bulls",
+                'fname' => "Chicago",
+                'lname' => "Bulls",
                 'abbr' => "CHI",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612741/primary/L/logo.svg",
                 'conference' => "EAST"
             ],
             [
-                'name' => "Cleveland Cavaliers",  
+                'fname' => "Cleveland",
+                'lname' => "Cavaliers",
                 'abbr' => "CLE",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612739/primary/L/logo.svg",
                 'conference' => "EAST"
             ],
             [
-                'name' => "Detroit Pistons",
+                'fname' => "Detroit",
+                'lname' => "Pistons",
                 'abbr' => "DET",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612765/primary/L/logo.svg",
                 'conference' => "EAST"
             ],
             [
-                'name' => "Indiana Pacers",
+                'fname' => "Indiana",
+                'lname' => "Pacers",
                 'abbr' => "IND",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612754/primary/L/logo.svg",
                 'conference' => "EAST"
             ],
             [
-                'name' => "Miami Heat",
+                'fname' => "Miami",
+                'lname' => "Heat",
                 'abbr' => "MIA",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612748/primary/L/logo.svg",
                 'conference' => "EAST"
             ],
             [
-                'name' => "Milwaukee Bucks",
+                'fname' => "Milwaukee",
+                'lname' => "Bucks",
                 'abbr' => "MIL",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612749/primary/L/logo.svg",
                 'conference' => "EAST"
             ],
             [
-                'name' => "New York Knicks",
+                'fname' => "New York",
+                'lname' => "Knicks",
                 'abbr' => "NYK",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612752/primary/L/logo.svg",
                 'conference' => "EAST"
             ],
             [
-                'name' => "Orlando Magic",
+                'fname' => "Orlando",
+                'lname' => "Magic",
                 'abbr' => "ORL",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612753/primary/L/logo.svg",
                 'conference' => "EAST"
             ],
             [
-                'name' => "Philadelphia 76ers",
+                'fname' => "Philadelphia",
+                'lname' => "76ers",
                 'abbr' => "PHI",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612755/primary/L/logo.svg",
                 'conference' => "EAST"
             ],
             [
-                'name' => "Toronto Raptors",
+                'fname' => "Toronto",
+                'lname' => "Raptors",
                 'abbr' => "TOR",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612761/primary/L/logo.svg",
                 'conference' => "EAST"
             ],
             [
-                'name' => "Washington Wizards",
+                'fname' => "Washington",
+                'lname' => "Wizards",
                 'abbr' => "WAS",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612764/primary/L/logo.svg",
                 'conference' => "EAST"
@@ -111,91 +126,106 @@ class NbaTeamsSeeder extends Seeder
 
             // Western Conference
             [
-                'name' => "Dallas Mavericks",
+                'fname' => "Dallas",
+                'lname' => "Mavericks",
                 'abbr' => "DAL",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612742/primary/L/logo.svg",
                 'conference' => "WEST"
             ],
             [
-                'name' => "Denver Nuggets",
+                'fname' => "Denver",
+                'lname' => "Nuggets",
                 'abbr' => "DEN",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612743/primary/L/logo.svg",
                 'conference' => "WEST"
             ],
             [
-                'name' => "Golden State Warriors",
+                'fname' => "Golden State",
+                'lname' => "Warriors",
                 'abbr' => "GSW",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612744/primary/L/logo.svg",
                 'conference' => "WEST"
             ],
             [
-                'name' => "Houston Rockets",
+                'fname' => "Houston",
+                'lname' => "Rockets",
                 'abbr' => "HOU",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612745/primary/L/logo.svg",
                 'conference' => "WEST"
             ],
             [
-                'name' => "Los Angeles Clippers",
+                'fname' => "Los Angeles",
+                'lname' => "Clippers",
                 'abbr' => "LAC",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612746/primary/L/logo.svg",
                 'conference' => "WEST"
             ],
             [
-                'name' => "Los Angeles Lakers",
+                'fname' => "Los Angeles",
+                'lname' => "Lakers",
                 'abbr' => "LAL",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612747/primary/L/logo.svg",
                 'conference' => "WEST"
             ],
             [
-                'name' => "Memphis Grizzlies",
+                'fname' => "Memphis",
+                'lname' => "Grizzlies",
                 'abbr' => "MEM",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612763/primary/L/logo.svg",
                 'conference' => "WEST"
             ],
             [
-                'name' => "Minnesota Timberwolves",
+                'fname' => "Minnesota",
+                'lname' => "Timberwolves",
                 'abbr' => "MIN",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612750/primary/L/logo.svg",
                 'conference' => "WEST"
             ],
             [
-                'name' => "New Orleans Pelicans",
+                'fname' => "New Orleans",
+                'lname' => "Pelicans",
                 'abbr' => "NOP",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612740/primary/L/logo.svg",
                 'conference' => "WEST"
             ],
             [
-                'name' => "Oklahoma City Thunder",
+                'fname' => "Oklahoma City",
+                'lname' => "Thunder",
                 'abbr' => "OKC",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612760/primary/L/logo.svg",
                 'conference' => "WEST"
             ],
             [
-                'name' => "Phoenix Suns",
+                'fname' => "Phoenix",
+                'lname' => "Suns",
                 'abbr' => "PHX",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612756/primary/L/logo.svg",
                 'conference' => "WEST"
             ],
             [
-                'name' => "Portland Trail Blazers",
+                'fname' => "Portland",
+                'lname' => "Trail Blazers",
                 'abbr' => "POR",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612757/primary/L/logo.svg",
                 'conference' => "WEST"
             ],
             [
-                'name' => "Sacramento Kings",
+                'fname' => "Sacramento",
+                'lname' => "Kings",
                 'abbr' => "SAC",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612758/primary/L/logo.svg",
                 'conference' => "WEST"
             ],
             [
-                'name' => "San Antonio Spurs",
+                'fname' => "San Antonio",
+                'lname' => "Spurs",
                 'abbr' => "SAS",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612759/primary/L/logo.svg",
                 'conference' => "WEST"
             ],
             [
-                'name' => "Utah Jazz",
+                'fname' => "Utah",
+                'lname' => "Jazz",
                 'abbr' => "UTA",
                 'logo' => "https://cdn.nba.com/logos/nba/1610612762/primary/L/logo.svg",
                 'conference' => "WEST"
@@ -218,8 +248,12 @@ class NbaTeamsSeeder extends Seeder
                     'league_id' => $nbaLeague->id
                 ],
                 [
-                    'name' => $team['name'],
-                    'slug' => Str::slug($team['name']),
+                    'fname' => $team['fname'],
+                    'lname' => $team['lname'],
+                    'abbr' => $team['abbr'],
+                    'slug' => Str::slug($team['fname']. ' ' . $team['lname']),
+                    'lname' => $team['lname'],
+                    'abbr' => $team['abbr'],
                     'logo' => $team['logo'],
                     'conference' => $team['conference'], 
                 ]

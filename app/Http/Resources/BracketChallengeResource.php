@@ -22,6 +22,8 @@ class BracketChallengeResource extends JsonResource
             'slug' => $this->slug,
             'description' => $this->description,
             'is_public' => $this->is_public,
+            // 'start_date' => $this->start_date,
+            // 'end_date' => $this->end_date,
             'start_date' => $this->start_date->toDateString(), // Format date
             'end_date' => $this->end_date->toDateString(),     // Format date
             'league_id' => $this->league_id,

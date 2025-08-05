@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('rounds', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('bracket_challenge_id')->constrained('bracket_challenge')->onDelete('cascade');
+            $table->foreignId('bracket_challenge_id')->constrained('bracket_challenges')->onDelete('cascade');
             $table->string('name');
             $table->string('conference')->nullable();
             $table->integer('order_index')->nullable();

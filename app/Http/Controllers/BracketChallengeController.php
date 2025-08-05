@@ -10,8 +10,7 @@ use App\Models\BracketChallenge;
 use App\Models\League;
 use App\Models\Team;
 use App\Http\Resources\BracketChallengeResource;
-
-
+use Carbon\Carbon;
 use App\Traits\BracketChallengeTrait;
 
 class BracketChallengeController extends Controller
@@ -64,6 +63,9 @@ class BracketChallengeController extends Controller
             'league' => 'required|string|exists:leagues,abbr',
         ]);
 
+        $twoDaysFromNow = Carbon::now()->addDays(2);
+        $threeDaysFromNow = Carbon::now()->addDays(3);
+
         // Retrieve the selected league based on the ID
         // $selectedLeague = League::find($request->input('league'));
         $selectedLeague = League::where('abbr', $request->input('league'))->firstOrFail();
@@ -71,12 +73,13 @@ class BracketChallengeController extends Controller
         // Define initial rules for the other fields
         $rules = [
             // 'name' => 'required|string|max:255|unique:bracket_challenge,name,' . $bracketChallenge->id,
-            'name' => 'required|string|max:255|unique:bracket_challenge,name',
+            'name' => 'required|string|max:255|unique:bracket_challenges,name',
             'description' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:255',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date',
+            'start_date' => 'required|date|after_or_equal:' . $twoDaysFromNow,
+            'end_date' => 'required|date|after_or_equal:' . $threeDaysFromNow,
+            'is_public' => 'boolean',
             'is_public' => 'boolean',
         ];
 
@@ -107,6 +110,9 @@ class BracketChallengeController extends Controller
 
         
         $customMessages = [
+
+            'start_date.after_or_equal' => 'Start date must be at least 2 days from now.',
+            'end_date.after_or_equal' => 'End date must be at least 3 days from now.',
             'bracket_data.teams.east.required' => 'East conference teams are required.',
             'bracket_data.teams.east.size' => 'You must select exactly 8 East conference teams.',
             'bracket_data.teams.east.*.exists' => 'Please select a valid East conference team.',
@@ -175,19 +181,22 @@ class BracketChallengeController extends Controller
     public function update(Request $request, BracketChallenge $bracketChallenge)
     {
 
+        $twoDaysFromNow = Carbon::now()->addDays(2);
+        $threeDaysFromNow = Carbon::now()->addDays(3);
+
         // Retrieve the selected league based on the ID
         $selectedLeague = $bracketChallenge->league;
 
         // Define initial rules for the other fields
         $rules = [
             // 'name' => 'required|string|max:255|unique:bracket_challenge,name,' . $bracketChallenge->id,
-            'name' => 'required|string|max:255|unique:bracket_challenge,name,' . $bracketChallenge->id,
+            'name' => 'required|string|max:255|unique:bracket_challenges,name,' . $bracketChallenge->id,
             'description' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:255',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date',
+            'start_date' => 'required|date|after_or_equal:' . $twoDaysFromNow,
+            'end_date' => 'required|date|after_or_equal:' . $threeDaysFromNow,
             'is_public' => 'boolean',
         ];
 
@@ -220,6 +229,9 @@ class BracketChallengeController extends Controller
 
         
         $customMessages = [
+            'start_date.after_or_equal' => 'Start date must be at least 2 days from now.',
+            'end_date.after_or_equal' => 'End date must be at least 3 days from now.',
+
             'bracket_data.teams.east.required' => 'East conference teams are required.',
             'bracket_data.teams.east.size' => 'You must select exactly 8 East conference teams.',
             'bracket_data.teams.east.*.exists' => 'Please select a valid East conference team.',
@@ -268,18 +280,7 @@ class BracketChallengeController extends Controller
         ]);
     }
 
-    public function fetchActiveChallenges()
-    {
-       $bracketChallenges = BracketChallenge::with('league')
-                    ->where('is_public', true)
-                    ->orderBy('id', 'desc')
-                    ->get();
-
-        return response()->json([
-            'message' => 'Challenges fetched successfully!',
-            'challenges' => BracketChallengeResource::collection($bracketChallenges)
-        ]);
-    }
+    
 
         
 

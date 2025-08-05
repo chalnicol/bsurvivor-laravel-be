@@ -8,10 +8,9 @@ use Illuminate\Support\Str;
 
 class BracketChallenge extends Model
 {
-    
     use HasFactory;
 
-    protected $table = 'bracket_challenge'; // Explicitly define table name if it's not 'bracket_challenges'
+    protected $table = 'bracket_challenges'; // Explicitly define table name if it's not 'bracket_challenges'
 
     protected $fillable = [
         'league_id',
