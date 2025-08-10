@@ -38,6 +38,11 @@ class BracketChallenge extends Model
         return $this->hasMany(Round::class);
     }
 
+    public function entries()
+    {
+        return $this->hasMany(BracketChallengeEntry::class);
+    }
+
 
   
 }

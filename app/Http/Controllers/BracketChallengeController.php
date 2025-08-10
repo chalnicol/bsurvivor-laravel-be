@@ -63,8 +63,7 @@ class BracketChallengeController extends Controller
             'league' => 'required|string|exists:leagues,abbr',
         ]);
 
-        $twoDaysFromNow = Carbon::now()->addDays(2);
-        $threeDaysFromNow = Carbon::now()->addDays(3);
+        $twoDaysFromNow = Carbon::now()->addDays(2)->toDateString();
 
         // Retrieve the selected league based on the ID
         // $selectedLeague = League::find($request->input('league'));
@@ -75,10 +74,8 @@ class BracketChallengeController extends Controller
             // 'name' => 'required|string|max:255|unique:bracket_challenge,name,' . $bracketChallenge->id,
             'name' => 'required|string|max:255|unique:bracket_challenges,name',
             'description' => 'nullable|string|max:255',
-            'description' => 'nullable|string|max:255',
-            'description' => 'nullable|string|max:255',
             'start_date' => 'required|date|after_or_equal:' . $twoDaysFromNow,
-            'end_date' => 'required|date|after_or_equal:' . $threeDaysFromNow,
+            'end_date' => 'required|date|after:start_date',
             'is_public' => 'boolean',
             'is_public' => 'boolean',
         ];
@@ -110,7 +107,6 @@ class BracketChallengeController extends Controller
 
         
         $customMessages = [
-
             'start_date.after_or_equal' => 'Start date must be at least 2 days from now.',
             'end_date.after_or_equal' => 'End date must be at least 3 days from now.',
             'bracket_data.teams.east.required' => 'East conference teams are required.',
@@ -189,16 +185,32 @@ class BracketChallengeController extends Controller
 
         // Define initial rules for the other fields
         $rules = [
-            // 'name' => 'required|string|max:255|unique:bracket_challenge,name,' . $bracketChallenge->id,
-            'name' => 'required|string|max:255|unique:bracket_challenges,name,' . $bracketChallenge->id,
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('bracket_challenges')->ignore($bracketChallenge->id),
+            ],
             'description' => 'nullable|string|max:255',
-            'description' => 'nullable|string|max:255',
-            'description' => 'nullable|string|max:255',
-            'description' => 'nullable|string|max:255',
-            'start_date' => 'required|date|after_or_equal:' . $twoDaysFromNow,
-            'end_date' => 'required|date|after_or_equal:' . $threeDaysFromNow,
             'is_public' => 'boolean',
         ];
+
+        // If the bracket challenge has not started yet
+       if (Carbon::now()->toDateString() < $bracketChallenge->start_date->toDateString()) {
+            // If the challenge hasn't started, the new start date must be at least two days from now.
+            $rules['start_date'] = 'required|date|after_or_equal:' . Carbon::now()->addDays(2)->toDateString();
+        } else {
+            // If the challenge has started, the start date can't be changed to an earlier date.
+            $rules['start_date'] = 'required|date|after_or_equal:' . $bracketChallenge->start_date->toDateString();
+        }
+
+        $rules['end_date'] = [
+            'required',
+            'date',
+            // The new end date must be after the start date.
+            'after:start_date',
+        ];
+
 
 
         // Step 2: Conditionally define rules for 'teams'

@@ -26,7 +26,7 @@ class Round extends Model
         return $this->hasMany(Matchup::class);
     }
 
-    public function bracket_challenge()
+    public function bracketChallenge()
     {
         return $this->belongsTo(BracketChallenge::class);
     }

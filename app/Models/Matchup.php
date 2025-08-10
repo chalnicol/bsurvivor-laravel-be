@@ -40,4 +40,7 @@ class Matchup extends Model
     {
         return $this->belongsTo(Team::class, 'winner_team_id');
     }
+
+
+    
 }

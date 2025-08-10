@@ -13,7 +13,7 @@ use App\Models\BracketChallengeEntry;
 
 use App\Http\Resources\BracketChallengeResource;
 use App\Http\Resources\BracketChallengeEntryResource;
-
+use App\Http\Resources\RoundCustomResource;
 
 class PageController extends Controller
 {
@@ -29,10 +29,21 @@ class PageController extends Controller
             ]);
         }
 
-        $bracketChallengeEntry->load('bracket_challenge.rounds.matchups.teams', 'bracket_challenge.league', 'user');
+        $bracketChallengeEntry->load([
+            'bracketChallenge.rounds.matchups.teams', 
+            'bracketChallenge.league', 
+            'user', 
+            'predictions'
+        ]);
 
         return new BracketChallengeEntryResource($bracketChallengeEntry);
 
+    }
+
+    private function findMatchupByOrderIndexAndMatchupIndex($challenge, $roundOrderIndex, $matchupIndex)
+    {
+        return $challenge->rounds->firstWhere('order_index', $roundOrderIndex)
+            ->matchups->firstWhere('matchup_index', $matchupIndex);
     }
 
     public function get_bracket_challenge(string $slug)
@@ -45,7 +56,7 @@ class PageController extends Controller
             ]);
         }
 
-        $hasEntry = false;
+        $bracketChallengeEntrySlug = "";
 
         // if (Auth::check()) {
         if (Auth::guard('sanctum')->check()) {
@@ -56,8 +67,10 @@ class PageController extends Controller
                 ->where('bracket_challenge_id', $bracketChallenge->id)
                 ->first();
             
-            $hasEntry = ($bracketChallengeEntry !== null);
-           
+            // $hasEntry = ($bracketChallengeEntry !== null);
+            if ( $bracketChallengeEntry ) {
+                $bracketChallengeEntrySlug = $bracketChallengeEntry->slug;
+            }
         }
 
         $bracketChallenge->load('league', 'rounds.matchups.teams');
@@ -66,7 +79,7 @@ class PageController extends Controller
         return response()->json([
             'message' => 'Bracket Challenge fetched successfully.',
             'bracketChallenge' => new BracketChallengeResource($bracketChallenge),
-            'hasEntry' => $hasEntry,
+            'bracketEntrySlug' => $bracketChallengeEntrySlug,
         ]); 
         
     }

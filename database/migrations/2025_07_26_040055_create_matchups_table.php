@@ -16,8 +16,6 @@ return new class extends Migration
             $table->foreignId('round_id')->constrained('rounds')->onDelete('cascade');
             $table->string('name');
             $table->integer('matchup_index')->nullable();
-            $table->integer('wins_team_1')->nullable();
-            $table->integer('wins_team_2')->nullable();
             $table->integer('winner_team_id')->nullable();
             $table->timestamps();
         });

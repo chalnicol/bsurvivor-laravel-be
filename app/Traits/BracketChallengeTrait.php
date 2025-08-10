@@ -52,8 +52,6 @@ trait BracketChallengeTrait
             $newMatchup = Matchup::create([
                 'name' => $matchupName,
                 'round_id' => $round->id,
-                'wins_team_1' => 0,
-                'wins_team_2' => 0,
                 'winner_team_id' => null,
                 'matchup_index' => $matchupIndex,
             ]);
@@ -86,8 +84,6 @@ trait BracketChallengeTrait
             $newMatchup = Matchup::create([
                 'name' => $matchupName,
                 'round_id' => $round->id,
-                'wins_team_1' => 0,
-                'wins_team_2' => 0,
                 'winner_team_id' => null,
                 'matchup_index' => $matchupIndex,
             ]);

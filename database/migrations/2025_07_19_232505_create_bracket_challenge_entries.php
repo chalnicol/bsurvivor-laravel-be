@@ -16,9 +16,9 @@ return new class extends Migration
             $table->foreignId('bracket_challenge_id')->constrained('bracket_challenges')->onDelete('cascade');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('name');
-            $table->json('entry_data')->nullable(); // Store user's entry data in JSON format   
-            // $table->boolean('is_winner')->default(false); // Whether the user won the challenge 
-            $table->string('status')->default('pending');
+            // $table->json('entry_data')->nullable(); // Store user's entry data in JSON format   
+            $table->string('status', 20)->default('active'); // 'active', 'eliminated', 'won'
+            $table->unsignedTinyInteger('last_round_survived')->default(0);
             $table->string('slug')->unique();
             $table->timestamps();
 

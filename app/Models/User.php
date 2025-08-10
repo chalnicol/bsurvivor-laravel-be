@@ -104,7 +104,7 @@ class User extends Authenticatable
         return (bool) $this->is_blocked;
     }
 
-    public function BracketChallengeEntries()
+    public function entries()
     {
         return $this->hasMany(BracketChallengeEntry::class);
     }

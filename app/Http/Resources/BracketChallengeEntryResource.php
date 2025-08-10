@@ -21,14 +21,16 @@ class BracketChallengeEntryResource extends JsonResource
             'name' => $this->name,
             'bracket_challenge_id' => $this->bracket_challenge_id,
             'user_id' => $this->user_id,
-            'entry_data' => $this->entry_data,
             'status' => $this->status,
-            'bracket_challenge' => $this->whenLoaded('bracket_challenge', function () {
-                return new BracketChallengeResource($this->bracket_challenge);
+            'last_round_survived' => $this->last_round_survived,
+            'bracket_challenge' => $this->whenLoaded('bracketChallenge', function () {
+                return new BracketChallengeResource($this->bracketChallenge);
             }),
             'user' => $this->whenLoaded('user', function () {
                 return new UserResource($this->user);
             }),
+            'predictions' => BracketChallengeEntryPredictionResource::collection($this->whenLoaded('predictions')),
+            
         ];
     }
 }

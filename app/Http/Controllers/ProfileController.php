@@ -6,70 +6,61 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Auth; // Import Auth facade
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
+use Illuminate\Validation\Rule;
+
 use App\Http\Resources\UserResource; 
+
 use App\Models\User;
 use App\Models\BracketChallengeEntry;
+use App\Models\BracketChallengeEntryPrediction;
+
 use App\Http\Resources\BracketChallengeEntryResource;
+use App\Http\Resources\RoundResourceCustom;
+
 
 class ProfileController extends Controller
 {
 
-    public function get_bracket_challenge_entries () {
-
+    public function get_bracket_challenge_entries(Request $request)
+    {
         $user = Auth::user();
-        if ( !$user ) {
+
+        if (!$user) {
             return response()->json([
-                'message' => 'Authentication required.',
-            ]);
+                'message' => 'Authentication required.'
+            ], 401);
         }
 
-        $bracketChallengeEntries = $user->bracketChallengeEntries()
-            ->with('bracket_challenge')
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
+        $query = $user->entries()
+            ->with('bracketChallenge.league');
+
+        if ($request->filled('search')) {
+            $searchTerm = '%' . strtolower(trim($request->input('search'))) . '%';
+
+            $query->where(function ($q) use ($searchTerm) {
+                // 1. Search by Bracket Entry Name
+                $q->whereRaw('LOWER(name) LIKE ?', [$searchTerm]);
+
+                $q->orWhereRaw('LOWER(status) LIKE ?', [$searchTerm]);
+                
+                $q->orWhereHas('bracketChallenge', function ($challengeQuery) use ($searchTerm) {
+                    $challengeQuery->whereRaw('LOWER(name) LIKE ?', [$searchTerm]);
+                });
+
+                // 2. Search by League Name OR Abbreviation
+                $q->orWhereHas('bracketChallenge.league', function ($leagueQuery) use ($searchTerm) {
+                    $leagueQuery->whereRaw('LOWER(name) LIKE ?', [$searchTerm])
+                                ->orWhereRaw('LOWER(abbr) LIKE ?', [$searchTerm]);
+                });
+            });
+        }
+
+        $bracketChallengeEntries = $query->orderBy('created_at', 'desc')->paginate(10);
 
         return BracketChallengeEntryResource::collection($bracketChallengeEntries);
-
-        // $groupedEntries = $bracketChallengeEntries->groupBy(function ($entry) {
-        //     // Check if bracket_challenge and league exist to prevent errors
-        //     return optional(optional($entry->bracket_challenge)->league)->abbr;
-        // });
-
-
-        // // 3. Format the grouped data for the JSON response
-        // $formattedGroupedEntries = [];
-        // foreach ($groupedEntries as $leagueName => $entriesCollection) {
-        //     // Skip entries that might not have a league (e.g., if relationship is null)
-        //     if (is_null($leagueName)) {
-        //         continue;
-        //     }
-
-        //     // Get the first entry from the collection to access the league details
-        //     $firstEntryInGroup = $entriesCollection->first();
-        //     $league = optional(optional($firstEntryInGroup->bracket_challenge)->league);
-
-        //     $formattedGroupedEntries[] = [
-        //         'league_id'   => $league->id,
-        //         'league_name' => $league->name,
-        //         // Apply BracketChallengeEntryResource to each entry in this specific league group
-        //         'entries'     => BracketChallengeEntryResource::collection($entriesCollection),
-        //     ];
-        // }
-
-        // // Optional: Sort the leagues by name or ID if desired
-        // // usort($formattedGroupedEntries, function($a, $b) {
-        // //     return $a['league_name'] <=> $b['league_name'];
-        // // });
-
-
-        // return response()->json([
-        //     'message' => 'Bracket Challenge Entries fetched successfully.',
-        //     'leagues' => $formattedGroupedEntries, // Return the grouped data
-        // ]);
-    
     }
 
     public function post_bracket_challenge_entry(Request $request) 
@@ -88,9 +79,19 @@ class ProfileController extends Controller
                           ->where('bracket_challenge_id', $bracketChallengeId);
                 })
             ],
-            'entry_data' => 'required|array',
+            // 'entry_data' => 'required|array',
+            'predictions' => 'required|array',
+            'predictions.*.matchup_id' => 'required|exists:matchups,id',
+            'predictions.*.teams' => 'required|array|size:2',
+            'predictions.*.teams.*' => 'required|integer|exists:teams,id',
+            'predictions.*.predicted_winner_team_id' => 'required|exists:teams,id',
         ], [
             'bracket_challenge_id.unique' => 'You have already submitted an entry for this bracket challenge.',
+            'predictions.matchup_id.exists' => 'Invalid matchup ID',
+            'predictions.teams.exists' => 'Invalid team ID',
+            'predictions.predicted_winner_team_id.exists' => 'Invalid predicted winner team ID',
+            'predictions.teams.size' => 'Only two teams can be in a matchup',
+            'predictions.teams.*.exists' => 'One or all team ids are invalid',
         ]);
 
         
@@ -102,21 +103,48 @@ class ProfileController extends Controller
 
         $name = 'BCE-'. $padded_challenge_id . '-' . $padded_user_id . '-' . Str::upper($randomString);
 
-        $bracketChallengeEntry = BracketChallengeEntry::create([
-            'bracket_challenge_id' => $request->bracket_challenge_id,
-            'entry_data' => $request->entry_data,
-            'user_id' => Auth::id(),
-            'name' => $name,
-            'slug' =>  Str::slug($name),
-        ]);
 
-        // $bracketChallengeEntry->load('bracket_challenge', 'user');
-        $bracketChallengeEntry->load('user');
+        DB::beginTransaction();
 
-        return response()->json([
-            'message' => 'Entry created successfully!',
-            'entry' => new BracketChallengeEntryResource($bracketChallengeEntry)
-        ]); 
+        try {
+            // 3. Create the main bracket entry record for the user.
+            $entry = BracketChallengeEntry::create([
+                'name' => $name,
+                'user_id' => auth()->id(),
+                'bracket_challenge_id' => $bracketChallengeId,
+                'status' => 'active',
+                'last_round_survived' => 0,
+                'slug' => Str::slug($name),
+            ]);
+
+            // 4. Prepare the predictions for saving.
+            $predictions = collect(request()->input('predictions'))->map(function ($prediction) use ($entry) {
+                return new BracketChallengeEntryPrediction([
+                    'bracket_challenge_entry_id' => $entry->id,
+                    'matchup_id' => $prediction['matchup_id'],
+                    'predicted_winner_team_id' => $prediction['predicted_winner_team_id'],
+                    'teams' => $prediction['teams'],
+                ]);
+            });
+
+            // 5. Save all predictions at once using Eloquent's saveMany method.
+            $entry->predictions()->saveMany($predictions);
+
+            // 6. If everything succeeded, commit the transaction to make the changes permanent.
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Your bracket entry has been saved successfully!'
+            ], 201); // 201 Created
+
+        } catch (\Exception $e) {
+            // 7. If any part of the process failed, roll back the transaction.
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'An error occurred while saving your bracket. Please try again.'
+            ], 500); // 500 Internal Server Error
+        }
     }
 
     public function updateProfile(Request $request)
@@ -185,5 +213,6 @@ class ProfileController extends Controller
 
         return response()->json(['message' => 'Account deleted successfully!']);
     }
+
 
 }
