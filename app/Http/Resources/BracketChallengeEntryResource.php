@@ -23,6 +23,7 @@ class BracketChallengeEntryResource extends JsonResource
             'user_id' => $this->user_id,
             'status' => $this->status,
             'last_round_survived' => $this->last_round_survived,
+            'slug' => $this->slug,
             'bracket_challenge' => $this->whenLoaded('bracketChallenge', function () {
                 return new BracketChallengeResource($this->bracketChallenge);
             }),
@@ -30,6 +31,8 @@ class BracketChallengeEntryResource extends JsonResource
                 return new UserResource($this->user);
             }),
             'predictions' => BracketChallengeEntryPredictionResource::collection($this->whenLoaded('predictions')),
+            'created_at' => $this->created_at->toDateString(), // Format date,
+            'updated_at' => $this->updated_at->toDateString(), // Format date,'
             
         ];
     }

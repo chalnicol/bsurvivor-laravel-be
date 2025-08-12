@@ -10,8 +10,11 @@ use App\Models\BracketChallenge;
 use App\Models\League;
 use App\Models\Team;
 use App\Http\Resources\BracketChallengeResource;
+use App\Http\Resources\RoundResource;
 use Carbon\Carbon;
 use App\Traits\BracketChallengeTrait;
+
+use Illuminate\Support\Facades\DB;
 
 class BracketChallengeController extends Controller
 {
@@ -63,8 +66,6 @@ class BracketChallengeController extends Controller
             'league' => 'required|string|exists:leagues,abbr',
         ]);
 
-        $twoDaysFromNow = Carbon::now()->addDays(2)->toDateString();
-
         // Retrieve the selected league based on the ID
         // $selectedLeague = League::find($request->input('league'));
         $selectedLeague = League::where('abbr', $request->input('league'))->firstOrFail();
@@ -74,7 +75,7 @@ class BracketChallengeController extends Controller
             // 'name' => 'required|string|max:255|unique:bracket_challenge,name,' . $bracketChallenge->id,
             'name' => 'required|string|max:255|unique:bracket_challenges,name',
             'description' => 'nullable|string|max:255',
-            'start_date' => 'required|date|after_or_equal:' . $twoDaysFromNow,
+            'start_date' => 'required|date|after_or_equal:' . Carbon::now()->toDateString(),
             'end_date' => 'required|date|after:start_date',
             'is_public' => 'boolean',
             'is_public' => 'boolean',
@@ -177,9 +178,6 @@ class BracketChallengeController extends Controller
     public function update(Request $request, BracketChallenge $bracketChallenge)
     {
 
-        $twoDaysFromNow = Carbon::now()->addDays(2);
-        $threeDaysFromNow = Carbon::now()->addDays(3);
-
         // Retrieve the selected league based on the ID
         $selectedLeague = $bracketChallenge->league;
 
@@ -196,9 +194,9 @@ class BracketChallengeController extends Controller
         ];
 
         // If the bracket challenge has not started yet
-       if (Carbon::now()->toDateString() < $bracketChallenge->start_date->toDateString()) {
+        if (Carbon::now()->toDateString() < $bracketChallenge->start_date->toDateString()) {
             // If the challenge hasn't started, the new start date must be at least two days from now.
-            $rules['start_date'] = 'required|date|after_or_equal:' . Carbon::now()->addDays(2)->toDateString();
+            $rules['start_date'] = 'required|date|after_or_equal:' . Carbon::now()->toDateString();
         } else {
             // If the challenge has started, the start date can't be changed to an earlier date.
             $rules['start_date'] = 'required|date|after_or_equal:' . $bracketChallenge->start_date->toDateString();
@@ -243,7 +241,6 @@ class BracketChallengeController extends Controller
         $customMessages = [
             'start_date.after_or_equal' => 'Start date must be at least 2 days from now.',
             'end_date.after_or_equal' => 'End date must be at least 3 days from now.',
-
             'bracket_data.teams.east.required' => 'East conference teams are required.',
             'bracket_data.teams.east.size' => 'You must select exactly 8 East conference teams.',
             'bracket_data.teams.east.*.exists' => 'Please select a valid East conference team.',
@@ -279,7 +276,6 @@ class BracketChallengeController extends Controller
             'message' => 'Challenge updated successfully!',
         ]);
     }
-
     /**
      * Remove the specified resource from storage.
      */
@@ -291,6 +287,118 @@ class BracketChallengeController extends Controller
             'message' => 'Challenge deleted successfully!',
         ]);
     }
+
+    public function updateMatchups(Request $request, BracketChallenge $bracketChallenge)
+    {
+        $request->validate([
+            'matchups' => 'required|array',
+            'matchups.*.matchup_id' => 'required|integer|exists:matchups,id',
+            // 'matchups.*.winner_team_id' => 'required|exists:teams,id',
+        ]);
+
+        $matchups = $request->input('matchups', []);
+
+        try {
+            DB::beginTransaction();
+
+            // Load the nested matchups relationship for the entire bracket challenge
+            $bracketChallenge->load('rounds.matchups');
+
+            // Create an efficient lookup table of all matchups in the challenge
+            $allMatchups = $bracketChallenge->rounds
+                ->flatMap(fn($round) => $round->matchups)
+                ->keyBy('id');
+
+            // Loop through the matchups submitted in the request
+            foreach ($request->input('matchups', []) as $reqMatchup) {
+                $matchupId = $reqMatchup['matchup_id'];
+                $winnerId = $reqMatchup['winner_team_id'];
+                $teamsData = $reqMatchup['teams'];
+
+                // Find the corresponding matchup from our lookup table
+                $dbMatchup = $allMatchups->get($matchupId);
+
+                if ($dbMatchup) {
+                    // Update the winner and save the change to the database
+                    $dbMatchup->winner_team_id = $winnerId;
+
+                    // Prepare data for the pivot table
+                    if (!empty($teamsData)) {
+                        $syncData = collect($teamsData)->mapWithKeys(function ($team) {
+                            return [$team['id'] => ['slot' => $team['slot'], 'seed' => $team['seed']]];
+                        })->toArray();
+                        // Use sync() to update the teams and their slots in the pivot table
+                        // This will detach any teams not in the new array and attach/update the new ones
+                        $dbMatchup->teams()->sync($syncData);
+                    }else {
+                        $dbMatchup->teams()->sync([]);
+                    }
+
+                    $dbMatchup->save();
+                }
+            }
+
+            DB::commit();
+
+            $bracketChallenge->load('rounds.matchups.teams');
+
+            return response()->json([
+                'message' => 'Matchup winners updated successfully.',
+                'rounds' => RoundResource::collection($bracketChallenge->rounds),
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to update matchups.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+
+
+    }
+
+    public function resetMatchups(BracketChallenge $bracketChallenge)
+    {
+        try {
+            DB::beginTransaction();
+
+            $bracketChallenge->load('rounds.matchups.teams');
+
+            foreach ($bracketChallenge->rounds as $round) { // <-- Corrected this line
+                foreach ($round->matchups as $matchup) {
+                    // Reset the winner team
+                    $matchup->winner_team_id = null;
+
+                    // For all rounds after the first, detach all teams
+                    if ($round->order_index > 1) {
+                        $matchup->teams()->sync([]);
+                    }
+                    
+                    $matchup->save();
+                }
+            }
+            
+            DB::commit();
+
+            $bracketChallenge->load('rounds.matchups.teams');
+
+            return response()->json([
+                'message' => 'Matchups reset successfully.',
+                'rounds' =>  RoundResource::collection($bracketChallenge->rounds), // Reload and return
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to reset matchups.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+
+
+    }
+
 
     
 

@@ -76,6 +76,9 @@ Route::middleware(['auth:sanctum', 'user.blocked'])->group(function () {
         Route::put('/admin/bracket-challenges/{bracketChallenge}', [BracketChallengeController::class, 'update']);
         Route::delete('/admin/bracket-challenges/{bracketChallenge}', [BracketChallengeController::class, 'destroy']);
 
+        Route::put('/admin/bracket-challenges/{bracketChallenge}/update', [BracketChallengeController::class, 'updateMatchups']);
+        Route::put('/admin/bracket-challenges/{bracketChallenge}/reset', [BracketChallengeController::class, 'resetMatchups']);
+
         Route::get('/admin/teams', [TeamController::class, 'index']);
         Route::get('/admin/teams/{team}', [TeamController::class, 'show']);
         Route::get('/admin/teams/{team}/edit', [TeamController::class, 'edit']);
@@ -85,6 +88,8 @@ Route::middleware(['auth:sanctum', 'user.blocked'])->group(function () {
 
         Route::get('/admin/roles', [RoleController::class, 'getAllRoles']);
         Route::get('/admin/roles-with-permissions', [RoleController::class, 'getAllRolesWithPermissions']);
+
+
 
     });
 

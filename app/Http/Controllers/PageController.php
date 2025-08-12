@@ -14,6 +14,7 @@ use App\Models\BracketChallengeEntry;
 use App\Http\Resources\BracketChallengeResource;
 use App\Http\Resources\BracketChallengeEntryResource;
 use App\Http\Resources\RoundCustomResource;
+use Carbon\Carbon;
 
 class PageController extends Controller
 {
@@ -40,15 +41,14 @@ class PageController extends Controller
 
     }
 
-    private function findMatchupByOrderIndexAndMatchupIndex($challenge, $roundOrderIndex, $matchupIndex)
-    {
-        return $challenge->rounds->firstWhere('order_index', $roundOrderIndex)
-            ->matchups->firstWhere('matchup_index', $matchupIndex);
-    }
-
     public function get_bracket_challenge(string $slug)
     {
-        $bracketChallenge = BracketChallenge::where('slug', $slug)->first();
+        //get is_public and within date range
+        $bracketChallenge = BracketChallenge::where('slug', $slug)
+            ->where('is_public', true)
+            // ->where('start_date', '<=', Carbon::now()->toDateString())
+            // ->where('end_date', '>=', Carbon::now()->toDateString())
+            ->first();
 
         if ( !$bracketChallenge ) {
             return response()->json([
@@ -86,10 +86,12 @@ class PageController extends Controller
 
     public function fetch_active_challenges()
     {
-       $bracketChallenges = BracketChallenge::with('league')
-                    ->where('is_public', true)
-                    ->orderBy('id', 'desc')
-                    ->get();
+        $bracketChallenges = BracketChallenge::with('league')
+            ->where('is_public', true)
+            ->where('start_date', '<=', Carbon::now()->toDateString())
+            ->where('end_date', '>=', Carbon::now()->toDateString())
+            ->orderBy('id', 'desc')
+            ->get();
 
         return response()->json([
             'message' => 'Challenges fetched successfully!',

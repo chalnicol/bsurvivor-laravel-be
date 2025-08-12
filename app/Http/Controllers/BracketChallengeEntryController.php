@@ -29,6 +29,9 @@ class BracketChallengeEntryController extends Controller
 
                 $q->orWhereRaw('LOWER(status) LIKE ?', [$searchTerm]);
 
+                $q->orWhereRaw('LOWER(MONTHNAME(created_at)) LIKE ?', [$searchTerm])
+                    ->orWhereRaw('YEAR(created_at) LIKE ?', [$searchTerm]);
+                    
                 // 2. Search by Username
                 $q->orWhereHas('user', function ($userQuery) use ($searchTerm) {
                     $userQuery->whereRaw('LOWER(username) LIKE ?', [$searchTerm]);

@@ -14,12 +14,14 @@ use Illuminate\Validation\Rule;
 use App\Http\Resources\UserResource; 
 
 use App\Models\User;
+use App\Models\BracketChallenge;
 use App\Models\BracketChallengeEntry;
 use App\Models\BracketChallengeEntryPrediction;
 
 use App\Http\Resources\BracketChallengeEntryResource;
 use App\Http\Resources\RoundResourceCustom;
 
+use Carbon\Carbon;
 
 class ProfileController extends Controller
 {
@@ -45,7 +47,10 @@ class ProfileController extends Controller
                 $q->whereRaw('LOWER(name) LIKE ?', [$searchTerm]);
 
                 $q->orWhereRaw('LOWER(status) LIKE ?', [$searchTerm]);
-                
+
+                $q->orWhereRaw('LOWER(MONTHNAME(created_at)) LIKE ?', [$searchTerm])
+                    ->orWhereRaw('YEAR(created_at) LIKE ?', [$searchTerm]);
+
                 $q->orWhereHas('bracketChallenge', function ($challengeQuery) use ($searchTerm) {
                     $challengeQuery->whereRaw('LOWER(name) LIKE ?', [$searchTerm]);
                 });
@@ -69,6 +74,19 @@ class ProfileController extends Controller
 
         $bracketChallengeId = $request->input('bracket_challenge_id');
 
+        //get bracket challenge
+        $bracketChallenge = BracketChallenge::where('id', $bracketChallengeId)
+            ->where('is_public', true)
+            ->where('start_date', '<=', Carbon::now()->toDateString())
+            ->where('end_date', '>=', Carbon::now()->toDateString())
+            ->first();
+
+        if ( !$bracketChallenge ) {
+            return response()->json([
+                'message' => 'Bracket challenge not found.',
+            ], 404);
+        }
+
         $request->validate([
             'bracket_challenge_id' => [
                 'required',
@@ -82,26 +100,25 @@ class ProfileController extends Controller
             // 'entry_data' => 'required|array',
             'predictions' => 'required|array',
             'predictions.*.matchup_id' => 'required|exists:matchups,id',
-            'predictions.*.teams' => 'required|array|size:2',
-            'predictions.*.teams.*' => 'required|integer|exists:teams,id',
             'predictions.*.predicted_winner_team_id' => 'required|exists:teams,id',
+            'predictions.*.teams' => 'required|array|size:2',
+            'predictions.*.teams.*.id' => 'required|integer|exists:teams,id',
         ], [
             'bracket_challenge_id.unique' => 'You have already submitted an entry for this bracket challenge.',
             'predictions.matchup_id.exists' => 'Invalid matchup ID',
             'predictions.teams.exists' => 'Invalid team ID',
             'predictions.predicted_winner_team_id.exists' => 'Invalid predicted winner team ID',
             'predictions.teams.size' => 'Only two teams can be in a matchup',
-            'predictions.teams.*.exists' => 'One or all team ids are invalid',
+            'predictions.teams.*.id.exists' => 'One or all team ids are invalid',
         ]);
 
         
-        $padded_user_id = str_pad(Auth::id(), 5, '0', STR_PAD_LEFT);
+        $padded_user_id = str_pad(Auth::id(), 3, '0', STR_PAD_LEFT);
 
-        $padded_challenge_id = str_pad($request->bracket_challenge_id, 5, '0', STR_PAD_LEFT);
+        $padded_challenge_id = str_pad($request->bracket_challenge_id, 4, '0', STR_PAD_LEFT);
 
-        $randomString = Str::random(10);
 
-        $name = 'BCE-'. $padded_challenge_id . '-' . $padded_user_id . '-' . Str::upper($randomString);
+        $name = 'BCE-'. $padded_challenge_id . '-'  . Str::upper(Str::random(5)) . $padded_user_id;
 
 
         DB::beginTransaction();
