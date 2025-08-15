@@ -15,10 +15,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('bracket_challenge_id')->constrained('bracket_challenges')->onDelete('cascade');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->string('name');
-            // $table->json('entry_data')->nullable(); // Store user's entry data in JSON format   
+            $table->string('name');  
             $table->string('status', 20)->default('active'); // 'active', 'eliminated', 'won'
-            $table->unsignedTinyInteger('last_round_survived')->default(0);
+            $table->unsignedTinyInteger('correct_predictions_count')->default(0);
             $table->string('slug')->unique();
             $table->timestamps();
 
@@ -31,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('bracket_challenge_entry');
+        Schema::dropIfExists('bracket_challenge_entries');
     }
 };

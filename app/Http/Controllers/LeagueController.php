@@ -142,19 +142,22 @@ class LeagueController extends Controller
             ], 422); // HTTP 422 Unprocessable Entity
         }
 
-        $logoPath = $league->logo; // Initialize logo path
+        $logoPath = $league->logo; // Initialize with the current logo path
 
-        // 4. Handle Logo Storage (if a file was uploaded)
-        if ($request->hasFile('logo')) {
-            // Store the file in storage/app/public/logos
-            // 'public' disk is configured in config/filesystems.php
-            $logoPath = $request->file('logo')->store('logos', 'public');
-            // Convert the internal storage path to a public URL for access
-            $logoPath = Storage::url($logoPath);
-        }
-        // 5. Handle Logo URL (if a URL was provided)
-        elseif ($request->filled('logo_url')) {
-            $logoPath = $request->input('logo_url');
+        // Handle new logo upload or URL
+        if ($request->hasFile('logo') || $request->filled('logo_url')) {
+            // Delete the old logo if it exists and was stored locally
+            if ($league->logo && Str::startsWith($league->logo, '/storage/')) {
+                $oldStoragePath = Str::replaceFirst('/storage/', '', $league->logo);
+                Storage::disk('public')->delete($oldStoragePath);
+            }
+
+            if ($request->hasFile('logo')) {
+                // Store the new file and get its public URL
+                $logoPath = Storage::url($request->file('logo')->store('logos', 'public'));
+            } else { // A new URL was provided
+                $logoPath = $request->input('logo_url');
+            }
         }
 
         // 6. Create the team)
@@ -174,7 +177,12 @@ class LeagueController extends Controller
 
     public function destroy(League $league)
     {
-        //
+        // If the league has a logo and it's stored locally, delete it from storage.
+        if ($league->logo && Str::startsWith($league->logo, '/storage/')) {
+            $storagePath = Str::replaceFirst('/storage/', '', $league->logo);
+            Storage::disk('public')->delete($storagePath);
+        }
+
         $league->delete();
 
         return response()->json([

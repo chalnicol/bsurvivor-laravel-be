@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Auth;
 
 class BracketChallengeResource extends JsonResource
 {
@@ -34,6 +35,12 @@ class BracketChallengeResource extends JsonResource
             }),
             'created_at' => $this->created_at->toDateString(), // Format date,
             'updated_at' => $this->updated_at->toDateString(), // Format date,
+            'entries' => $this->whenLoaded('entries', function () {
+                return BracketChallengeEntryResource::collection($this->entries);
+            }),
+            $this->mergeWhen(Auth::guard('sanctum')->check(), [
+                'has_entry' => $this->entries->isNotEmpty(),
+            ]),
         ];
     }
 }

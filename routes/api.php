@@ -27,10 +27,12 @@ Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink
 Route::post('/reset-password', [ResetPasswordController::class, 'reset'])->name('password.update');
 
 Route::get('/bracket-challenges/active', [PageController::class, 'fetch_active_challenges']);
+Route::get('/bracket-challenges/ongoing', [PageController::class, 'fetch_ongoing_challenges']);
 Route::get('/bracket-challenges/{slug}', [PageController::class, 'get_bracket_challenge']);
 
 Route::get('/bracket-challenge-entries/{slug}', [PageController::class, 'get_bracket_challenge_entry']);
 
+// Route::get('/top-entries/{bracketChallengeId}', [PageController::class, 'get_top_entries']);
 
 // Protected routes (require authentication with Sanctum)
 Route::middleware(['auth:sanctum', 'user.blocked'])->group(function () {
@@ -44,6 +46,7 @@ Route::middleware(['auth:sanctum', 'user.blocked'])->group(function () {
     Route::put('/user/profile', [ProfileController::class, 'updateProfile']);
     Route::put('/user/password', [ProfileController::class, 'updatePassword']);
     Route::delete('/user', [ProfileController::class, 'deleteAccount']);
+    
     
     //.admin role..
 

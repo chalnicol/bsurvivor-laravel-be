@@ -35,7 +35,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $adminRole = Role::create(['name' => 'admin']);
         $adminRole->givePermissionTo(Permission::all()); 
 
-        $editorRole = Role::create(['name' => 'editor']);
+        $editorRole = Role::create(['name' => 'staff']);
         $editorRole->givePermissionTo(['edit challenge', 'edit users']);
 
         $editorRole = Role::create(['name' => 'spectator']);
@@ -53,7 +53,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $editor = User::find(2); 
         if ($editor) {
-            $editor->assignRole('editor');
+            $editor->assignRole('staff');
         }
     }
 }

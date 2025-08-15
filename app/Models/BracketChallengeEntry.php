@@ -13,7 +13,9 @@ class BracketChallengeEntry extends Model
         'name',
         'bracket_challenge_id',
         'user_id',
-        'slug'
+        'slug',
+        'status',
+        'correct_predictions_count',
     ];
 
     protected $casts = [

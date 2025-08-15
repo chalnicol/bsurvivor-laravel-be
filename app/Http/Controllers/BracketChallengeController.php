@@ -12,6 +12,7 @@ use App\Models\Team;
 use App\Http\Resources\BracketChallengeResource;
 use App\Http\Resources\RoundResource;
 use Carbon\Carbon;
+
 use App\Traits\BracketChallengeTrait;
 
 use Illuminate\Support\Facades\DB;
@@ -75,7 +76,7 @@ class BracketChallengeController extends Controller
             // 'name' => 'required|string|max:255|unique:bracket_challenge,name,' . $bracketChallenge->id,
             'name' => 'required|string|max:255|unique:bracket_challenges,name',
             'description' => 'nullable|string|max:255',
-            'start_date' => 'required|date|after_or_equal:' . Carbon::now()->toDateString(),
+            'start_date' => 'required|date|after_or_equal:' . Carbon::now(),
             'end_date' => 'required|date|after:start_date',
             'is_public' => 'boolean',
             'is_public' => 'boolean',
@@ -178,6 +179,8 @@ class BracketChallengeController extends Controller
     public function update(Request $request, BracketChallenge $bracketChallenge)
     {
 
+        $now = Carbon::now();
+
         // Retrieve the selected league based on the ID
         $selectedLeague = $bracketChallenge->league;
 
@@ -193,21 +196,28 @@ class BracketChallengeController extends Controller
             'is_public' => 'boolean',
         ];
 
-        // If the bracket challenge has not started yet
-        if (Carbon::now()->toDateString() < $bracketChallenge->start_date->toDateString()) {
-            // If the challenge hasn't started, the new start date must be at least two days from now.
-            $rules['start_date'] = 'required|date|after_or_equal:' . Carbon::now()->toDateString();
+        // Check if the challenge has not started yet
+        if ($now->lessThan($bracketChallenge->start_date)) {
+            // If it hasn't started, new start date must be in the future
+            $rules['start_date'] = 'required|date|after_or_equal:today';
         } else {
-            // If the challenge has started, the start date can't be changed to an earlier date.
-            $rules['start_date'] = 'required|date|after_or_equal:' . $bracketChallenge->start_date->toDateString();
+            // If it has started, the start date cannot be changed.
+            // It must be the same as the original start date to prevent it from moving.
+            $rules['start_date'] = 'required|date|same:' . $bracketChallenge->start_date->toDateString();
         }
 
+        
         $rules['end_date'] = [
             'required',
             'date',
             // The new end date must be after the start date.
             'after:start_date',
         ];
+
+        // If the challenge has already started, we must ensure the new end date is in the future.
+        if ($now->greaterThanOrEqual($bracketChallenge->start_date)) {
+            $rules['end_date'][] = 'after_or_equal:today';
+        }
 
 
 
@@ -289,7 +299,24 @@ class BracketChallengeController extends Controller
     }
 
     public function updateMatchups(Request $request, BracketChallenge $bracketChallenge)
-    {
+    {   
+
+
+        // Check if the submission period for the challenge has ended.
+        // The deadline is the end_date of the bracketChallenge.
+        $now = Carbon::now();
+        $deadline = new Carbon($bracketChallenge->end_date);
+
+        // Add a day to the deadline to ensure it's after the end of the final day.
+        // This is because the submission period includes the entire last day.
+        $deadline->addDay();
+        
+        if ($now < $deadline) {
+            return response()->json([
+                'message' => 'Matchups can only be updated after the submission period has ended.'
+            ], 403); // Use 403 Forbidden to indicate the action is not allowed.
+        }
+
         $request->validate([
             'matchups' => 'required|array',
             'matchups.*.matchup_id' => 'required|integer|exists:matchups,id',
@@ -332,6 +359,7 @@ class BracketChallengeController extends Controller
                         $dbMatchup->teams()->sync($syncData);
                     }else {
                         $dbMatchup->teams()->sync([]);
+                        $dbMatchup->winner_team_id = null;
                     }
 
                     $dbMatchup->save();
@@ -343,7 +371,7 @@ class BracketChallengeController extends Controller
             $bracketChallenge->load('rounds.matchups.teams');
 
             return response()->json([
-                'message' => 'Matchup winners updated successfully.',
+                'message' => 'Bracket challenge updated successfully.',
                 'rounds' => RoundResource::collection($bracketChallenge->rounds),
             ]);
 
@@ -351,47 +379,6 @@ class BracketChallengeController extends Controller
             DB::rollBack();
             return response()->json([
                 'message' => 'Failed to update matchups.',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-
-
-    }
-
-    public function resetMatchups(BracketChallenge $bracketChallenge)
-    {
-        try {
-            DB::beginTransaction();
-
-            $bracketChallenge->load('rounds.matchups.teams');
-
-            foreach ($bracketChallenge->rounds as $round) { // <-- Corrected this line
-                foreach ($round->matchups as $matchup) {
-                    // Reset the winner team
-                    $matchup->winner_team_id = null;
-
-                    // For all rounds after the first, detach all teams
-                    if ($round->order_index > 1) {
-                        $matchup->teams()->sync([]);
-                    }
-                    
-                    $matchup->save();
-                }
-            }
-            
-            DB::commit();
-
-            $bracketChallenge->load('rounds.matchups.teams');
-
-            return response()->json([
-                'message' => 'Matchups reset successfully.',
-                'rounds' =>  RoundResource::collection($bracketChallenge->rounds), // Reload and return
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => 'Failed to reset matchups.',
                 'error' => $e->getMessage()
             ], 500);
         }

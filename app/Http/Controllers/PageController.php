@@ -86,10 +86,26 @@ class PageController extends Controller
 
     public function fetch_active_challenges()
     {
+        // Initialize userId to null.
+        $userId = null;
+        // Check if a user is logged in and get their ID.
+
+        // if (Auth::check()) {
+        if (Auth::guard('sanctum')->check()) {
+            // $userId = Auth::id();
+            $userId = Auth::guard('sanctum')->id();
+        }
+
         $bracketChallenges = BracketChallenge::with('league')
             ->where('is_public', true)
-            ->where('start_date', '<=', Carbon::now()->toDateString())
-            ->where('end_date', '>=', Carbon::now()->toDateString())
+            ->where('start_date', '<=', Carbon::now())
+            ->where('end_date', '>=', Carbon::now())
+            // // Conditionally eager load the entries if a user is authenticated.
+            ->when($userId, function ($query, $userId) {
+                $query->with(['entries' => function ($query) use ($userId) {
+                    $query->where('user_id', $userId);
+                }]);
+            })
             ->orderBy('id', 'desc')
             ->get();
 
@@ -99,5 +115,38 @@ class PageController extends Controller
         ]);
     }
 
+    public function fetch_ongoing_challenges () {
+
+        $bracketChallenges = BracketChallenge::with(['entries' => function ($query) {
+            $query->with('user')
+                ->orderBy('correct_predictions_count', 'desc')
+                ->limit(10);
+        }])
+            ->where('is_public', true)
+            ->where('end_date', '<=', Carbon::now())
+            ->orderBy('id', 'desc')
+            ->get();
+
+        return response()->json([
+            'message' => "Bracket challenges fetched successfully",
+            'challenges' => BracketChallengeResource::collection($bracketChallenges)
+        ]);
+    }
+
+    public function get_top_entries (int $bracketChallengeId) 
+    {
+        $topEntries = BracketChallengeEntry::with('user')
+        ->where('bracket_challenge_id', $bracketChallengeId) // Specify the active challenge
+        ->orderBy('correct_predictions_count', 'desc')
+        ->limit(10)
+        ->get();
+
+        return response()->json([
+            'message' => 'Top entries fetched successfully.',
+            'entries' => BracketChallengeEntryResource::collection($topEntries)
+        ]);
+    }
+
+    
 
 }

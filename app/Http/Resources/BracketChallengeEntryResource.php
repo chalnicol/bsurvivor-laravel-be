@@ -22,7 +22,7 @@ class BracketChallengeEntryResource extends JsonResource
             'bracket_challenge_id' => $this->bracket_challenge_id,
             'user_id' => $this->user_id,
             'status' => $this->status,
-            'last_round_survived' => $this->last_round_survived,
+            // 'last_round_survived' => $this->last_round_survived,
             'slug' => $this->slug,
             'bracket_challenge' => $this->whenLoaded('bracketChallenge', function () {
                 return new BracketChallengeResource($this->bracketChallenge);

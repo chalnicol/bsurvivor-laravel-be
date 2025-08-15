@@ -74,16 +74,19 @@ class ProfileController extends Controller
 
         $bracketChallengeId = $request->input('bracket_challenge_id');
 
+        // Get the current time for precise comparison
+        $now = Carbon::now();
+
         //get bracket challenge
         $bracketChallenge = BracketChallenge::where('id', $bracketChallengeId)
             ->where('is_public', true)
-            ->where('start_date', '<=', Carbon::now()->toDateString())
-            ->where('end_date', '>=', Carbon::now()->toDateString())
+            ->where('start_date', '<=', $now)
+            ->where('end_date', '>=', $now)
             ->first();
 
         if ( !$bracketChallenge ) {
             return response()->json([
-                'message' => 'Bracket challenge not found.',
+                'message' => 'Bracket challenge is not available or has expired.',
             ], 404);
         }
 
@@ -130,7 +133,7 @@ class ProfileController extends Controller
                 'user_id' => auth()->id(),
                 'bracket_challenge_id' => $bracketChallengeId,
                 'status' => 'active',
-                'last_round_survived' => 0,
+                // 'last_round_survived' => 0,
                 'slug' => Str::slug($name),
             ]);
 
