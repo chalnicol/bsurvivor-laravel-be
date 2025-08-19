@@ -13,6 +13,14 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter; // Add this
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Session;
+
+use Illuminate\Auth\Events\Registered;
+
+use Illuminate\Support\Str;
+
+use App\Mail\CustomVerifyEmail; // Your custom mail class 
 
 class AuthController extends Controller
 {
@@ -29,16 +37,78 @@ class AuthController extends Controller
             'username' => $request->username,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'email_verification_token' => Str::random(60)
         ]);
 
-        // Generate token for the newly registered user
-        $token = $user->createToken('auth_token')->plainTextToken;
+        //event(new Registered($user));
+        if ( $user) {
+            session()->put('pending_email_verification', $user->email);
+
+            Mail::to($user->email)->queue(new CustomVerifyEmail($user));
+        }
 
         return response()->json([
             'message' => 'User registered successfully!',
-            'user' => $user,
-            'token' => $token,
+            // 'user' => $user,
+            // 'token' => $token,
         ], 201);
+    }
+
+    public function sendVerificationEmail(Request $request)
+    {
+        $email = session()->get('pending_email_verification');
+
+        if ( !$email ) {
+            return response()->json(['message' => 'No pending email verification found.'], 404);
+        }
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        if ($user && $user->email_verified_at) {
+            return response()->json(['message' => 'Email is already verified.'], 409);
+        }
+
+        Mail::to($user->email)->queue(new CustomVerifyEmail($user));
+        
+        return response()->json(['message' => 'Verification link sent!']);
+    }
+
+    public function verifyEmail (Request $request) 
+    {
+
+        // Validate the email and token sent from your React app
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+            'token' => 'required|string',
+        ]);
+
+        // Find the user by their email
+        $user = User::where('email', $request->email)->first();
+
+        if ($user && $user->email_verified_at) {
+            return response()->json(['message' => 'Email is already verified.'], 409);
+        }
+
+        // Check if the token matches
+        if (!$user || $user->email_verification_token !== $request->token) {
+            return response()->json(['message' => 'Invalid verification token.'], 401);
+        }
+
+        // Mark the user as verified
+        $user->email_verified_at = now();
+        $user->email_verification_token = null; // Clear the token for security
+        $user->save();
+
+        $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Email verified successfully!',
+            'user' => $user,
+        ])->cookie('sanctum_token', $token, 60 * 24 * 7, null, null, true, true);
     }
 
     public function login(Request $request)
@@ -79,19 +149,23 @@ class AuthController extends Controller
         // On successful login, clear the throttle counter
         RateLimiter::clear($throttleKey);
 
-        $user = $request->user();
+        // $user = $request->user()->load('roles.permissions');
+        $user->load('roles.permissions');
+        
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'message' => 'Logged in successfully!',
-            'user' => $user,
-            'token' => $token,
-        ]);
+            'user' => new UserResource($user),
+        ])->cookie('sanctum_token', $token, 60 * 24 * 7, null, null, true, true);
     }
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete(); // Revoke the current token
+        //Auth::logout();
+        $request->user()->tokens()->delete(); // Revoke the current token
+        $request->session()->invalidate(); // Clear the session
+        $request->session()->regenerateToken(); // Regenerate the session token
 
         return response()->json(['message' => 'Logged out successfully!']);
     }
@@ -100,7 +174,11 @@ class AuthController extends Controller
     {
         $user = $request->user()->load('roles.permissions');
 
-        // return response()->json($request->user());
         return new UserResource($user);
     }
+
+
+    
+
+
 }

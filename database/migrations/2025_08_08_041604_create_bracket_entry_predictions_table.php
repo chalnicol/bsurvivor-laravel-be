@@ -18,7 +18,6 @@ return new class extends Migration
             $table->foreignId('predicted_winner_team_id')->constrained('teams')->cascadeOnDelete();
             $table->json('teams');
             $table->timestamps();
-
             $table->unique(['bracket_challenge_entry_id', 'matchup_id']); // One prediction per matchup per entry
         });
     }

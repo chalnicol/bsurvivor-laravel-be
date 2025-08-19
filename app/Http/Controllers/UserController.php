@@ -112,7 +112,8 @@ class UserController extends Controller
         ], 200); // 200 OK
     }
 
-    public function updateUserRoles (Request $request, User $user) {
+    public function updateUserRoles (Request $request, User $user) 
+    {
 
         //..
         $role = Role::where('name', $request->role)->first();

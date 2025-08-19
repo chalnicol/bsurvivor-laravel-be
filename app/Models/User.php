@@ -15,6 +15,9 @@ use Illuminate\Support\Facades\Mail;
 
 use App\Notifications\ResetPasswordNotification; // Import your custom notification
 use App\Mail\PasswordResetMail;
+use App\Notifications\VerifyEmailNotification;
+use App\Models\BracketChallengeEntry;
+
 
 class User extends Authenticatable
 {
@@ -30,7 +33,8 @@ class User extends Authenticatable
         'username',
         'email',
         'password',
-        'is_blocked'
+        'is_blocked',
+        'email_verification_token'
     ];
 
     /**
@@ -67,7 +71,7 @@ class User extends Authenticatable
     protected $appends = [
         // 'roles', // Spatie adds roles directly, no need to append.
         'all_permissions', // Custom accessor to flatten all permissions
-        // 'can_access', // (Optional) For a simple boolean check
+        // 'can_access', // (Optional) For a simple boolean check 
     ];
 
     /**
@@ -80,13 +84,18 @@ class User extends Authenticatable
     {
         // Get user's email and name for the Mailable
         $userEmail = $this->getEmailForPasswordReset();
-        $userName = $this->name ?? $this->email; // Assuming 'name' column exists, otherwise use email
+        $userName = $this->username ?? $this->email; // Assuming 'name' column exists, otherwise use email
 
         // Send your custom Mailable
         // Mail::to($userEmail)->send(new PasswordResetMail($token, $userEmail, $userName));
         Mail::to($userEmail)->queue(new PasswordResetMail($token, $userEmail, $userName));
 
     }
+
+    // public function sendEmailVerificationNotification()
+    // {
+    //     $this->notify(new VerifyEmailNotification);
+    // }
 
     /**
      * Get all permissions of the user, including those from roles.

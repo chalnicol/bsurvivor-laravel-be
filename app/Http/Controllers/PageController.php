@@ -43,16 +43,21 @@ class PageController extends Controller
 
     public function get_bracket_challenge(string $slug)
     {
+      
+        $now =Carbon::now('UTC')->toDateString();
+
+        $bracketChallengeEntrySlug = "";
+
         //get is_public and within date range
         $bracketChallenge = BracketChallenge::where('slug', $slug)
             ->where('is_public', true)
-            // ->where('start_date', '<=', Carbon::now()->toDateString())
-            // ->where('end_date', '>=', Carbon::now()->toDateString())
+            ->where('start_date', '<=', $now)
+            ->where('end_date', '>=', $now)
             ->first();
 
         if ( !$bracketChallenge ) {
             return response()->json([
-                'message' => 'Bracket Challenge not found.',
+                'message' => 'Bracket Challenge not found 11.',
             ]);
         }
 
@@ -96,10 +101,13 @@ class PageController extends Controller
             $userId = Auth::guard('sanctum')->id();
         }
 
+        $now = Carbon::now('UTC')->toDateString();
+        // $now = Carbon::create(2025, 8, 16, 0, 0, 0, 'Asia/Manila');
+
         $bracketChallenges = BracketChallenge::with('league')
             ->where('is_public', true)
-            ->where('start_date', '<=', Carbon::now())
-            ->where('end_date', '>=', Carbon::now())
+            ->where('start_date', '<=',  $now)
+            ->where('end_date', '>=',  $now)
             // // Conditionally eager load the entries if a user is authenticated.
             ->when($userId, function ($query, $userId) {
                 $query->with(['entries' => function ($query) use ($userId) {
@@ -115,7 +123,11 @@ class PageController extends Controller
         ]);
     }
 
-    public function fetch_ongoing_challenges () {
+    public function fetch_ongoing_challenges () 
+    {
+
+        $now = Carbon::now('UTC')->toDateString();
+        // $now = Carbon::create(2025, 8, 19, 0, 0, 0, 'UTC')->toDateString();
 
         $bracketChallenges = BracketChallenge::with(['entries' => function ($query) {
             $query->with('user')
@@ -123,7 +135,7 @@ class PageController extends Controller
                 ->limit(10);
         }])
             ->where('is_public', true)
-            ->where('end_date', '<=', Carbon::now())
+            ->where('end_date', '<', $now)
             ->orderBy('id', 'desc')
             ->get();
 

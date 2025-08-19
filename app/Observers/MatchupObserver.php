@@ -26,10 +26,11 @@ class MatchupObserver
             $bracketChallenge = $matchup->round->bracketChallenge;
 
             // Dispatch a job for each entry to update its status
-            $bracketChallenge->entries()->chunk(100, function($entries) {
-                foreach ($entries as $entry) {
-                    CheckEntryStatus::dispatch($entry);
-                }
+            $bracketChallenge->entries()->chunk(100, function($entries) use($bracketChallenge) {
+                // foreach ($entries as $entry) {
+                //     CheckEntryStatus::dispatch($entry);
+                // }
+                CheckEntryStatus::dispatch($entries, $bracketChallenge);
             });
         }
     }

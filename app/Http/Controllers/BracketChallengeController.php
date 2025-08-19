@@ -13,8 +13,8 @@ use App\Http\Resources\BracketChallengeResource;
 use App\Http\Resources\RoundResource;
 use Carbon\Carbon;
 
+use App\Events\BracketChallengeUpdated;
 use App\Traits\BracketChallengeTrait;
-
 use Illuminate\Support\Facades\DB;
 
 class BracketChallengeController extends Controller
@@ -76,7 +76,7 @@ class BracketChallengeController extends Controller
             // 'name' => 'required|string|max:255|unique:bracket_challenge,name,' . $bracketChallenge->id,
             'name' => 'required|string|max:255|unique:bracket_challenges,name',
             'description' => 'nullable|string|max:255',
-            'start_date' => 'required|date|after_or_equal:' . Carbon::now(),
+            'start_date' => 'required|date|after_or_equal:' . Carbon::now('UTC')->toDateString(),
             'end_date' => 'required|date|after:start_date',
             'is_public' => 'boolean',
             'is_public' => 'boolean',
@@ -179,7 +179,7 @@ class BracketChallengeController extends Controller
     public function update(Request $request, BracketChallenge $bracketChallenge)
     {
 
-        $now = Carbon::now();
+        $now = Carbon::now('UTC')->toDateString();
 
         // Retrieve the selected league based on the ID
         $selectedLeague = $bracketChallenge->league;
@@ -304,7 +304,9 @@ class BracketChallengeController extends Controller
 
         // Check if the submission period for the challenge has ended.
         // The deadline is the end_date of the bracketChallenge.
-        $now = Carbon::now();
+        $now = Carbon::now('UTC')->toDateString();
+        //$now = Carbon::create(2025, 8, 25, 0, 0, 0, 'Asia/Manila')->toDateString();
+
         $deadline = new Carbon($bracketChallenge->end_date);
 
         // Add a day to the deadline to ensure it's after the end of the final day.
@@ -369,6 +371,8 @@ class BracketChallengeController extends Controller
             DB::commit();
 
             $bracketChallenge->load('rounds.matchups.teams');
+
+            event(new BracketChallengeUpdated($bracketChallenge));
 
             return response()->json([
                 'message' => 'Bracket challenge updated successfully.',

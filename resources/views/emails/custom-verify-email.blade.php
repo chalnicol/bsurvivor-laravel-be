@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reset Your Password</title>
+    <title>Verify Your Email Address</title>
     <style>
         /* Add your custom CSS here for styling and responsiveness */
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
@@ -30,17 +30,15 @@
             <h1>{{ config('app.name') }}</h1>
         </div>
         <div class="content">
-            <p>Hello, {{ $userName }}!</p>
-
-            <p>You are receiving this email because we received a password reset request for your account.</p>
+            <p>Hello {{ $userName }},</p>
+            
+            <p>Please click the button below to verify your email address and activate your account.</p>
 
             <div class="button-container">
-                <a href="{{ $resetUrl }}" class="button">Reset Password</a>
+                <a href="{{ $verificationUrl }}" class="button">Verify Email</a>
             </div>
 
-            <p>This password reset link will expire in {{ $expireMinutes }} minutes.</p>
-
-            <p>If you did not request a password reset, no further action is required.</p>
+            <p>If you did not create an account, no further action is required.</p>
 
             <p>Thanks,<br>{{ config('app.name') }}</p>
         </div>

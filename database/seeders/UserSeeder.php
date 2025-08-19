@@ -7,6 +7,7 @@ use Illuminate\Database\Seeder;
 use App\Models\User; // Import your User model
 use Illuminate\Support\Facades\Hash; // For hashing the password
 
+
 class UserSeeder extends Seeder
 {
     /**
@@ -20,12 +21,30 @@ class UserSeeder extends Seeder
             [
                 "username" => "adminUser",
                 "email" => "admin@example.com",
-                "password" => Hash::make('admin123'), // Use a secure password
+                "password" => Hash::make('asdfasdf'), // Use a secure password
                 "email_verified_at" => now(), // Set email as verified
             ],
-             [
-                "username" => "chalnicol",
+            [
+                "username" => "charlou",
                 "email" => "charlou@example.com",
+                "password" => Hash::make('asdfasdf'), // Use a secure password
+                "email_verified_at" => now(), // Set email as verified
+            ],
+            [
+                "username" => "nong",
+                "email" => "nong@example.com",
+                "password" => Hash::make('asdfasdf'), // Use a secure password
+                "email_verified_at" => now(), // Set email as verified
+            ],
+            [
+                "username" => "nongers",
+                "email" => "nongers@example.com",
+                "password" => Hash::make('asdfasdf'), // Use a secure password
+                "email_verified_at" => now(), // Set email as verified
+            ],
+            [
+                "username" => "charles",
+                "email" => "charles@example.com",
                 "password" => Hash::make('asdfasdf'), // Use a secure password
                 "email_verified_at" => now(), // Set email as verified
             ],

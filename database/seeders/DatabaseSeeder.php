@@ -24,6 +24,9 @@ class DatabaseSeeder extends Seeder
         $this->call(NbaTeamsSeeder::class);
         //pba teams..
         $this->call(PbaTeamsSeeder::class);
-
+        // bracket challenges..
+        $this->call(BracketChallengeSeeder::class);
+        // bracket challenge entries..
+        // $this->call(BracketChallengeEntrySeeder::class);
     }
 }

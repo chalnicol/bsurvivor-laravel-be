@@ -29,7 +29,8 @@ class TeamController extends Controller
         // Apply search filter if a search term is provided
         if ($searchTerm) {
             $query->where(function($q) use ($searchTerm) {
-                $q->where('name', 'LIKE', '%' . $searchTerm . '%')
+                $q->where('fname', 'LIKE', '%' . $searchTerm . '%')
+                  ->orWhere('lname', 'LIKE', '%' . $searchTerm . '%')
                   ->orWhere('abbr', 'LIKE', '%' . $searchTerm . '%')
                   ->orWhere('conference', 'LIKE', '%' . $searchTerm . '%');
                 // You can add more columns to search here, e.g.:

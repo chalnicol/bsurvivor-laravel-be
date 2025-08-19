@@ -20,6 +20,8 @@ use App\Models\BracketChallengeEntryPrediction;
 
 use App\Http\Resources\BracketChallengeEntryResource;
 use App\Http\Resources\RoundResourceCustom;
+use App\Mail\CustomVerifyEmail; // Your custom mail class 
+use Illuminate\Support\Facades\Mail; 
 
 use Carbon\Carbon;
 
@@ -28,7 +30,13 @@ class ProfileController extends Controller
 
     public function get_bracket_challenge_entries(Request $request)
     {
-        $user = Auth::user();
+
+        // if (Auth::guard('sanctum')->check()) {
+        //     // $userId = Auth::id();
+        //     $user = Auth::guard('sanctum')->user;
+        // }
+
+        $user = Auth::guard('sanctum')->user();
 
         if (!$user) {
             return response()->json([
@@ -70,12 +78,14 @@ class ProfileController extends Controller
 
     public function post_bracket_challenge_entry(Request $request) 
     {
-        $userId = Auth::id();
 
+
+        $userId =  Auth::guard('sanctum')->id();
+       
         $bracketChallengeId = $request->input('bracket_challenge_id');
 
         // Get the current time for precise comparison
-        $now = Carbon::now();
+        $now = Carbon::now('UTC')->toDateString();
 
         //get bracket challenge
         $bracketChallenge = BracketChallenge::where('id', $bracketChallengeId)
@@ -144,6 +154,7 @@ class ProfileController extends Controller
                     'matchup_id' => $prediction['matchup_id'],
                     'predicted_winner_team_id' => $prediction['predicted_winner_team_id'],
                     'teams' => $prediction['teams'],
+                    'status' => 'active',
                 ]);
             });
 
@@ -172,27 +183,40 @@ class ProfileController extends Controller
         $user = $request->user(); // Get the authenticated user
 
         $request->validate([
-            'username' => ['nullable', 'string', 'min:5', 'max:15', 'unique:users,username,' . $user->id], // Example for username
-            'email' => ['nullable', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id], // Example for email
-            // Add other validation rules for fields you allow to be updated
+            'username' => 'required|string|min:5|max:15|unique:users,username,' . $user->id,
+            'email' => 'required|string|email|max:255|unique:users,email,'. $user->id,
         ]);
 
-        // Only update fields that are present in the request
-        if ($request->has('username')) {
-            $user->username = $request->username;
-        }
-        if ($request->has('email')) {
+        $isEmailNew = $user->email !== $request->email;
+
+        $user->username = $request->username;
+
+        if ( $isEmailNew  ) {
+
             $user->email = $request->email;
+            $user->email_verification_token = Str::random(60);
+            $user->email_verified_at = null;
+
+            $user->save();
+
+            Mail::to($request->email)->queue(new CustomVerifyEmail($user));
+
+            $user->tokens()->where('id', $user->currentAccessToken()->id)->delete();
+
+            return response()->json([
+                'message' => 'Profile updated. A new verification link has been sent to your new email address. You have been logged out for security.',
+                'is_email_new' => true,
+            ], 200);
+
         }
-        // ... update other fields as needed
 
         $user->save();
-
         $user->load('roles.permissions');
 
         return response()->json([
             'message' => 'Profile updated successfully!',
-            'user' => new UserResource($user) // Return the updated user data
+            'user' => new UserResource($user), // Return the updated user data
+            'is_email_new' => false,
         ]);
     }
 

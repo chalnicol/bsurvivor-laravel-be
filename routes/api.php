@@ -15,6 +15,8 @@ use App\Http\Controllers\BracketChallengeController;
 use App\Http\Controllers\BracketChallengeEntryController;
 use App\Http\Controllers\PageController;
 
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
+
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
 // })->middleware('auth:sanctum');
@@ -32,10 +34,14 @@ Route::get('/bracket-challenges/{slug}', [PageController::class, 'get_bracket_ch
 
 Route::get('/bracket-challenge-entries/{slug}', [PageController::class, 'get_bracket_challenge_entry']);
 
-// Route::get('/top-entries/{bracketChallengeId}', [PageController::class, 'get_top_entries']);
+Route::post('/email/verify', [AuthController::class, 'verifyEmail']);
 
+Route::post('/email/verification-notification', [AuthController::class, 'sendVerificationEmail'])->middleware('throttle:6,1');
+
+// Route::get('/top-entries/{bracketChallengeId}', [PageController::class, 'get_top_entries']); 
+// Route::post('/authenticate', [AuthController::class, 'authenticateUser']);
 // Protected routes (require authentication with Sanctum)
-Route::middleware(['auth:sanctum', 'user.blocked'])->group(function () {
+Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -46,7 +52,6 @@ Route::middleware(['auth:sanctum', 'user.blocked'])->group(function () {
     Route::put('/user/profile', [ProfileController::class, 'updateProfile']);
     Route::put('/user/password', [ProfileController::class, 'updatePassword']);
     Route::delete('/user', [ProfileController::class, 'deleteAccount']);
-    
     
     //.admin role..
 
@@ -92,12 +97,8 @@ Route::middleware(['auth:sanctum', 'user.blocked'])->group(function () {
         Route::get('/admin/roles', [RoleController::class, 'getAllRoles']);
         Route::get('/admin/roles-with-permissions', [RoleController::class, 'getAllRolesWithPermissions']);
 
-
-
     });
 
-    // Add your basketball survivor application API routes here, e.g.:
-    // Route::resource('leagues', LeagueController::class);
-    // Route::post('leagues/{league}/join', [LeagueController::class, 'join']);
-    // Route::get('games/{game}/picks', [PickController::class, 'getUserPicks']);
+   
+
 });
