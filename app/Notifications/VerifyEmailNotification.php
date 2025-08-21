@@ -47,14 +47,6 @@ class VerifyEmailNotification extends Notification implements ShouldQueue
                         'verificationUrl' => $verificationUrl,
                     ])
                     ->subject('Verify Your Email Address');
-
-        // VerifyEmail::toMailUsing(function (object $notifiable, string $url) {
-        // return (new MailMessage)
-        //     ->view('emails.custom-verify-email', [
-        //         'user' => $notifiable,
-        //         'verificationUrl' => $url])
-        //     ->subject('Verify Email Address');
-        // });
     }
 
     /**

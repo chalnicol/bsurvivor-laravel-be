@@ -10,7 +10,7 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use App\Models\User;
 
-class CustomVerifyEmail extends Mailable
+class VerifyEmailMailable extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -29,7 +29,6 @@ class CustomVerifyEmail extends Mailable
     {
         // Construct the frontend reset URL
         // Ensure config('app.frontend_url') is set in .env and config/app.php
-
         $this->verificationUrl = config('app.frontend_url') . '/verify?token=' . $user->email_verification_token . '&email=' . urlencode($user->email);
         $this->userName = $user->username ?? 'User'; // Default to 'User' if name is not provider
 
@@ -50,9 +49,6 @@ class CustomVerifyEmail extends Mailable
      */
     public function content(): Content
     {
-        // return new Content(
-        //     view: 'view.name',
-        // );
         return new Content(
             // markdown: 'emails.password-reset', // Use a Blade Markdown view
             view: 'emails.custom-verify-email',

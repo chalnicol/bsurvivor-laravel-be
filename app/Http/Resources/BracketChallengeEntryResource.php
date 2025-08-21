@@ -29,7 +29,12 @@ class BracketChallengeEntryResource extends JsonResource
                 return new BracketChallengeResource($this->bracketChallenge);
             }),
             'user' => $this->whenLoaded('user', function () {
-                return new UserResource($this->user);
+                // return new UserResource($this->user);
+                return [
+                    'id' => $this->user->id,
+                    'username' => $this->user->username,
+                    'email' => $this->user->email,
+                ];
             }),
             'predictions' => BracketChallengeEntryPredictionResource::collection($this->whenLoaded('predictions')),
             'created_at' => $this->created_at->toDateString(), // Format date,

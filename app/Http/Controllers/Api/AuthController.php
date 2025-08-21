@@ -20,7 +20,7 @@ use Illuminate\Auth\Events\Registered;
 
 use Illuminate\Support\Str;
 
-use App\Mail\CustomVerifyEmail; // Your custom mail class 
+use App\Mail\VerifyEmailMailable; // Your custom mail class 
 
 class AuthController extends Controller
 {
@@ -72,7 +72,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Email is already verified.'], 409);
         }
 
-        Mail::to($user->email)->queue(new CustomVerifyEmail($user));
+        Mail::to($user->email)->queue(new VerifyEmailMailable($user));
         
         return response()->json(['message' => 'Verification link sent!']);
     }

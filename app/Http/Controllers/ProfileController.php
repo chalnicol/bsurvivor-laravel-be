@@ -20,8 +20,15 @@ use App\Models\BracketChallengeEntryPrediction;
 
 use App\Http\Resources\BracketChallengeEntryResource;
 use App\Http\Resources\RoundResourceCustom;
-use App\Mail\CustomVerifyEmail; // Your custom mail class 
+use App\Mail\VerifyEmailMailable; // Your custom mail class 
+use App\Mail\FriendRequestSentMailable; // Your custom mail class 
 use Illuminate\Support\Facades\Mail; 
+
+use App\Notifications\FriendRequestSent; // Import the notification class
+use App\Notifications\FriendRequestReceived; // Import the notification class
+use Illuminate\Database\Eloquent\Builder;
+use App\Http\Resources\NotificationResource;
+use Illuminate\Notifications\DatabaseNotification;
 
 use Carbon\Carbon;
 
@@ -178,7 +185,7 @@ class ProfileController extends Controller
         }
     }
 
-    public function updateProfile(Request $request)
+    public function update_profile(Request $request)
     {
         $user = $request->user(); // Get the authenticated user
 
@@ -199,7 +206,7 @@ class ProfileController extends Controller
 
             $user->save();
 
-            Mail::to($request->email)->queue(new CustomVerifyEmail($user));
+            Mail::to($request->email)->queue(new VerifyEmailMailable($user));
 
             $user->tokens()->where('id', $user->currentAccessToken()->id)->delete();
 
@@ -220,7 +227,7 @@ class ProfileController extends Controller
         ]);
     }
 
-    public function updatePassword(Request $request)
+    public function update_password(Request $request)
     {
         $user = $request->user();
 
@@ -239,7 +246,7 @@ class ProfileController extends Controller
         return response()->json(['message' => 'Password updated successfully!']);
     }
 
-    public function deleteAccount(Request $request)
+    public function delete_account(Request $request)
     {
         $user = $request->user(); // Get the authenticated user
 
@@ -257,6 +264,214 @@ class ProfileController extends Controller
 
         return response()->json(['message' => 'Account deleted successfully!']);
     }
+
+    public function hasFriendshipWith(User $user): bool
+    {
+        return $this->belongsToMany(User::class, 'friendships')
+                    // Check if the current user is in user_id AND target is in friend_id
+                    ->where(function ($query) use ($user) {
+                        $query->where('user_id', $this->id)
+                            ->where('friend_id', $user->id);
+                    })
+                    // OR check if the target is in user_id AND current is in friend_id
+                    ->orWhere(function ($query) use ($user) {
+                        $query->where('user_id', $user->id)
+                            ->where('friend_id', $this->id);
+                    })
+                    ->wherePivot('status', 'accepted')
+                    ->exists();
+    }
+
+    public function friends_action (Request $request) 
+    {
+
+        $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+            'action' => 'required|in:add,remove,accept,cancel',
+        ]);
+
+        $currentUser = Auth::user();
+        
+        // $user = $request->input('user_id');
+
+        $user = User::where('id', $request->input('user_id'))->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+        
+        $action = $request->input('action');
+        
+        if (!$action) {
+            return response()->json(['message' => 'Action not found.'], 404);
+        }
+
+        if ($action === 'remove') {
+            //remove from friends of mine
+            $currentUser->friendsOfMine()->detach($user->id);
+            //remove from friend of
+            $currentUser->friendOf()->detach($user->id);
+
+        }else if ($action === 'cancel') {
+
+            $request = $currentUser->friendRequestsSent()->where('friend_id', $user->id)->exists();
+            if (!$request) {
+                return response()->json(['message' => 'Friend request may have been accepted or rejected.'], 404);
+            }
+            //remove from friend requests sent
+            $currentUser->friendRequestsSent()->detach($user->id);
+
+        }else if ($action === 'accept') {
+
+            // Find the pending request from the other user
+            $request = $currentUser->friendRequestsReceived()->where('user_id', $user->id)->exists();
+
+            if (!$request) {
+                return response()->json(['message' => 'Friend request may have been cancelled.'], 404);
+            }
+
+            $user->friendRequestsSent()->updateExistingPivot($currentUser->id, ['status' => 'accepted']);
+            
+        }else if ($action === 'reject') {
+
+            $request = $currentUser->friendRequestsReceived()->where('user_id', $user->id)->exists();
+            if (!$request) {
+                return response()->json(['message' => 'Friend request may have been cancelled.'], 404);
+            }
+            //remove from friend requests received
+            $currentUser->friendRequestsReceived()->detach($user->id);
+
+        }else if ($action === 'add') {
+
+            // Prevent a user from friending themselves
+            if ($currentUser->id === $user->id) {
+                return response()->json(['message' => 'You cannot send a friend request to yourself.'], 400);
+            }
+            
+            // Check if a friendship already exists or is pending
+            if ($currentUser->hasAnyFriendshipWith($user)) {
+                return response()->json(['message' => 'A friendship or pending request already exists.'], 409);
+            }
+
+            // Create the friendship record with 'pending' status
+            $currentUser->friendRequestsSent()->attach($user->id, ['status' => 'pending']);
+
+        }
+
+        //return friends..
+        $currentUser->load(['friendsOfMine','friendOf', 'friendRequestsSent', 'friendRequestsReceived']);
+
+        $friends = $currentUser->friendsOfMine->merge($currentUser->friendOf);
+
+       
+        return response()->json([
+            'message' => "Friends have been updated successfully.",
+            'friends' => [
+                'active_friends' => $friends,
+                'pending_friends' => $currentUser->friendRequestsSent,
+                'to_accept_friends' => $currentUser->friendRequestsReceived,
+                'blocked_friends' => []
+            ]
+        ], 200);
+
+    }
+
+    
+    public function get_friends()
+    {
+        $user = Auth::user();
+
+        // Eager load both relationships in a single query.
+        $user->load(['friendsOfMine','friendOf', 'friendRequestsSent', 'friendRequestsReceived']);
+
+        $friends = $user->friendsOfMine->merge($user->friendOf);
+
+        return response()->json([
+            'message' => 'Friends fetched successfully.',
+            'friends' => [
+                'active_friends' => $friends,
+                'pending_friends' => $user->friendRequestsSent,
+                'to_accept_friends' => $user->friendRequestsReceived,
+                'blocked_friends' => []
+            ]
+        ], 200);
+    }
+
+    public function search_users(Request $request) 
+    {
+
+        $searchTerm = $request->input('search', "");
+
+        if (empty($searchTerm)) {
+            return response()->json([
+                'message' => 'Users fetched successfully empty.',
+                'users' => [],
+            ]);
+        }
+
+        $currentUser = Auth::user();
+
+        //$currentUser->load('friends', 'friendRequestsSent', 'friendRequestsReceived');
+
+        // Get the users from the database, excluding the current user.
+        $users = User::where(function ($query) use ($searchTerm) {
+            $query->where('username', 'like', '%' . $searchTerm . '%')
+                ->orWhere('email', 'like', '%' . $searchTerm . '%');
+        })
+        // ->whereNotIn('id', $excludeIds)
+        ->where('id', '!=', $currentUser->id)
+        ->orderBy('id', 'desc')
+        ->limit(5)
+        ->get();
+
+        $mappedUsers = $users->map(function ($user) use ($currentUser) {
+            return [
+                'id' => $user->id,
+                'username' => $user->username,
+            ];
+        });
+
+        return response()->json([
+            'message' => 'Users fetched successfully.',
+            'users' => $mappedUsers,
+        ]);
+
+    }
+
+    public function get_notifications()
+    {
+        $user = Auth::user();
+
+        // Get all notifications for the user
+        $notifications = $user->notifications()->latest()->paginate(10);
+
+        return NotificationResource::collection($notifications);
+
+    }
+
+    public function mark_read (Request $request)
+    {
+        // Validate the request to ensure a notification ID is present
+        $request->validate([
+            'notification_id' => 'required|string',
+        ]);
+
+        $notification = DatabaseNotification::find($request->input('notification_id'));
+        
+        // Check if the notification exists and belongs to the authenticated user for security
+        if (!$notification || $notification->notifiable_id != Auth::id()) {
+            return response()->json(['message' => 'Notification not found or unauthorized.'], 404);
+        }
+        
+        $notification->markAsRead();
+        
+        return response()->json(['message' => 'Notification marked as read.'], 200);
+    }
+
+
+
+
+    
 
 
 }

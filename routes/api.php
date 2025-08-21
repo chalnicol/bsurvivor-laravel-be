@@ -38,10 +38,22 @@ Route::post('/email/verify', [AuthController::class, 'verifyEmail']);
 
 Route::post('/email/verification-notification', [AuthController::class, 'sendVerificationEmail'])->middleware('throttle:6,1');
 
-// Route::get('/top-entries/{bracketChallengeId}', [PageController::class, 'get_top_entries']); 
+Route::get('/bracket-challenges/{bracketChallenge}/leaderboard', [PageController::class, 'get_leaderboard']);
+
 // Route::post('/authenticate', [AuthController::class, 'authenticateUser']);
 // Protected routes (require authentication with Sanctum)
 Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function () {
+
+    Route::get('/search-users', [ProfileController::class, 'search_users']);
+
+    Route::get('/get-friends', [ProfileController::class, 'get_friends']);
+
+    Route::get('/get-notifications', [ProfileController::class, 'get_notifications']);
+
+    Route::put('/mark-read', [ProfileController::class, 'mark_read']);
+
+    Route::post('/friends-action', [ProfileController::class, 'friends_action']);
+
 
     Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -49,9 +61,9 @@ Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function 
 
     Route::get('/user/bracket-challenge-entries', [ProfileController::class, 'get_bracket_challenge_entries']);
     Route::post('/user/bracket-challenge-entries', [ProfileController::class, 'post_bracket_challenge_entry']);
-    Route::put('/user/profile', [ProfileController::class, 'updateProfile']);
-    Route::put('/user/password', [ProfileController::class, 'updatePassword']);
-    Route::delete('/user', [ProfileController::class, 'deleteAccount']);
+    Route::put('/user/profile', [ProfileController::class, 'update_profile']);
+    Route::put('/user/password', [ProfileController::class, 'update_password']);
+    Route::delete('/user', [ProfileController::class, 'delete_account']);
     
     //.admin role..
 

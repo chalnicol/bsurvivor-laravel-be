@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -14,9 +15,15 @@ use Illuminate\Auth\Passwords\CanResetPassword as CanResetPasswordTrait; // Add 
 use Illuminate\Support\Facades\Mail;
 
 use App\Notifications\ResetPasswordNotification; // Import your custom notification
-use App\Mail\PasswordResetMail;
 use App\Notifications\VerifyEmailNotification;
+
+use App\Mail\PasswordResetMailable;
+
 use App\Models\BracketChallengeEntry;
+
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+
+use Illuminate\Database\Eloquent\Builder;
 
 
 class User extends Authenticatable
@@ -84,11 +91,11 @@ class User extends Authenticatable
     {
         // Get user's email and name for the Mailable
         $userEmail = $this->getEmailForPasswordReset();
+
         $userName = $this->username ?? $this->email; // Assuming 'name' column exists, otherwise use email
 
         // Send your custom Mailable
-        // Mail::to($userEmail)->send(new PasswordResetMail($token, $userEmail, $userName));
-        Mail::to($userEmail)->queue(new PasswordResetMail($token, $userEmail, $userName));
+        Mail::to($userEmail)->queue(new PasswordResetMailable($token, $userEmail, $userName));
 
     }
 
@@ -116,6 +123,57 @@ class User extends Authenticatable
     public function entries()
     {
         return $this->hasMany(BracketChallengeEntry::class);
+    }
+
+    /**
+     * The friends that the user has accepted.
+     */
+
+    public function hasAnyFriendshipWith(User $user): bool
+    {
+        return $this->belongsToMany(User::class, 'friendships')
+            ->where(function (Builder $query) use ($user) {
+                $query->where('user_id', $this->id)
+                    ->where('friend_id', $user->id);
+            })
+            ->orWhere(function (Builder $query) use ($user) {
+                $query->where('user_id', $user->id)
+                    ->where('friend_id', $this->id);
+            })
+            ->exists();
+    }
+    public function friendsOfMine(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'friendships', 'user_id', 'friend_id')
+            ->wherePivot('status', 'accepted')
+            ->withTimestamps();
+    }
+
+    public function friendOf(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'friendships', 'friend_id', 'user_id')
+            ->wherePivot('status', 'accepted')
+            ->withTimestamps();
+    }
+
+    /**
+     * The users who have requested the current user as a friend.
+     */
+    public function friendRequestsSent(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'friendships', 'user_id', 'friend_id')
+            ->wherePivot('status', 'pending')
+            ->withTimestamps();
+    }
+
+    /**
+     * The users to whom the current user has sent a friend request.
+     */
+    public function friendRequestsReceived(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'friendships', 'friend_id', 'user_id')
+            ->wherePivot('status', 'pending')
+            ->withTimestamps();
     }
 
 

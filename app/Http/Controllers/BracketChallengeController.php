@@ -304,16 +304,12 @@ class BracketChallengeController extends Controller
 
         // Check if the submission period for the challenge has ended.
         // The deadline is the end_date of the bracketChallenge.
-        $now = Carbon::now('UTC')->toDateString();
-        //$now = Carbon::create(2025, 8, 25, 0, 0, 0, 'Asia/Manila')->toDateString();
+        $now = Carbon::now('UTC');
+        // $now = Carbon::create(2025, 8, 21, 0, 0, 0, 'UTC');
 
-        $deadline = new Carbon($bracketChallenge->end_date);
+        $deadline = new Carbon($bracketChallenge->end_date)->addDay();
 
-        // Add a day to the deadline to ensure it's after the end of the final day.
-        // This is because the submission period includes the entire last day.
-        $deadline->addDay();
-        
-        if ($now < $deadline) {
+        if ($deadline->greaterThanOrEqualTo($now)) {
             return response()->json([
                 'message' => 'Matchups can only be updated after the submission period has ended.'
             ], 403); // Use 403 Forbidden to indicate the action is not allowed.
