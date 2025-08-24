@@ -29,7 +29,7 @@ use Illuminate\Database\Eloquent\Builder;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasRoles, HasFactory, Notifiable, HasApiTokens, CanResetPasswordTrait;
+    use HasFactory, Notifiable, HasApiTokens, HasRoles, CanResetPasswordTrait;
 
     /**
      * The attributes that are mass assignable.

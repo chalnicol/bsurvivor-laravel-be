@@ -287,7 +287,7 @@ class ProfileController extends Controller
 
         $request->validate([
             'user_id' => 'required|integer|exists:users,id',
-            'action' => 'required|in:add,remove,accept,cancel',
+            'action' => 'required|in:add,remove,accept,cancel,reject',
         ]);
 
         $currentUser = Auth::user();
@@ -356,6 +356,12 @@ class ProfileController extends Controller
             // Create the friendship record with 'pending' status
             $currentUser->friendRequestsSent()->attach($user->id, ['status' => 'pending']);
 
+            //notify
+            $user->notify(new FriendRequestSent($currentUser, $user));
+
+
+
+
         }
 
         //return friends..
@@ -376,7 +382,6 @@ class ProfileController extends Controller
 
     }
 
-    
     public function get_friends()
     {
         $user = Auth::user();
@@ -438,6 +443,24 @@ class ProfileController extends Controller
 
     }
 
+    public function getUnreadCount()
+    {
+
+        if (!Auth::guard('sanctum')->check()) {
+            return response()->json([
+                'count' => 0,
+            ]);
+        }
+
+        $user = Auth::guard('sanctum')->user();
+
+        $unreadCount = $user->unreadNotifications()->count();
+
+        return response()->json([
+            'count' => $unreadCount,
+        ]);
+    }
+
     public function get_notifications()
     {
         $user = Auth::user();
@@ -449,7 +472,7 @@ class ProfileController extends Controller
 
     }
 
-    public function mark_read (Request $request)
+    public function mark_read_notification (Request $request)
     {
         // Validate the request to ensure a notification ID is present
         $request->validate([
@@ -468,10 +491,17 @@ class ProfileController extends Controller
         return response()->json(['message' => 'Notification marked as read.'], 200);
     }
 
+    public function delete_notification (DatabaseNotification $notification)
+    {
+        $notification->delete();
+        return response()->json(['message' => 'Notification deleted successfully.'], 200);
+    }
+
+   
+
+}
+
 
 
 
     
-
-
-}

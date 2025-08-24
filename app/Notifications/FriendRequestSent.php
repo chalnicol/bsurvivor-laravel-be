@@ -5,23 +5,29 @@ namespace App\Notifications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Broadcasting\PrivateChannel;
+
 use Illuminate\Notifications\Notification;
 use App\Mail\FriendRequestSentMailable; // Import the Mailable
 use App\Models\User;
 
-class FriendRequestSent extends Notification
+
+class FriendRequestSent extends Notification implements ShouldBroadcast
 {
     use Queueable;
 
     protected $sender;
+    protected $notifiableUser;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(User $sender)
+    public function __construct(User $sender, User $notifiableUser)
     {
         //
         $this->sender = $sender;
+        $this->notifiableUser = $notifiableUser;
     }
 
     /**
@@ -31,7 +37,25 @@ class FriendRequestSent extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', 'broadcast'];
+    }
+
+    public function broadcastOn(): array
+    {
+        // The $this->notifiable is the recipient of the notification (the User model).
+        return [
+            new PrivateChannel('users.' . $this->notifiableUser->id),
+        ];
+    }
+
+    public function toBroadcast(object $notifiable): array
+    {
+        $unreadCount = $this->notifiableUser->unreadNotifications()->count();
+
+        return [
+            'unread_count' => $unreadCount,
+        ];
+
     }
 
     /**
@@ -54,6 +78,7 @@ class FriendRequestSent extends Notification
             'sender_id' => $this->sender->id,
             'sender_name' => $this->sender->username,
             'message' => $this->sender->username . ' sent you a friend request.',
+            'url' => '/friends'
         ];
     }
 

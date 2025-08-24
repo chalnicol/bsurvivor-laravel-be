@@ -53,7 +53,7 @@ class FriendRequestReceived extends Notification
         return [
             'sender_id' => $this->sender->id,
             'sender_name' => $this->sender->username,
-            'message' => 'Friend request received from . ' . $this->sender->username,
+            'message' => 'Friend request received from '. $this->sender->username,
         ];
     }
 

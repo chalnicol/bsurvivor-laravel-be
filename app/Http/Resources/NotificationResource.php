@@ -20,8 +20,8 @@ class NotificationResource extends JsonResource
            'id' => $this->id,
            'type' => class_basename($this->type), // Get only the class name (e.g., 'FriendRequestSent')
            'data' => $this->data, // This is already an array/object because Laravel casts it
-           'read_at' => $this->read_at,
-           'created_at' => $this->created_at,
+           'read_at' => $this->read_at ? $this->read_at->toDateString() : null,
+           'created_at' => $this->created_at->toDateString(),
            // You can add more derived data here if needed,
            // for example, to check if it's read or not:
            'is_read' => (bool) $this->read_at,

@@ -40,9 +40,20 @@ Route::post('/email/verification-notification', [AuthController::class, 'sendVer
 
 Route::get('/bracket-challenges/{bracketChallenge}/leaderboard', [PageController::class, 'get_leaderboard']);
 
-// Route::post('/authenticate', [AuthController::class, 'authenticateUser']);
+
+Route::group(['middleware' => ['web', 'auth:sanctum']], function () {
+    // Other protected API routes that need both session and Sanctum auth...
+    
+    // This is the crucial part for broadcasting
+    Broadcast::routes();
+});
+
 // Protected routes (require authentication with Sanctum)
 Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function () {
+
+    // Broadcast::routes();
+
+    Route::get('/get-unread-count', [ProfileController::class, 'getUnreadCount']);
 
     Route::get('/search-users', [ProfileController::class, 'search_users']);
 
@@ -50,10 +61,11 @@ Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function 
 
     Route::get('/get-notifications', [ProfileController::class, 'get_notifications']);
 
-    Route::put('/mark-read', [ProfileController::class, 'mark_read']);
+    Route::put('/mark-as-read-notification', [ProfileController::class, 'mark_read_notification']);
+
+    Route::delete('/delete-notification/{notification}', [ProfileController::class, 'delete_notification']);
 
     Route::post('/friends-action', [ProfileController::class, 'friends_action']);
-
 
     Route::post('/logout', [AuthController::class, 'logout']);
 

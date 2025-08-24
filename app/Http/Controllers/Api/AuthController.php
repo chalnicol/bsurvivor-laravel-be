@@ -150,22 +150,27 @@ class AuthController extends Controller
         RateLimiter::clear($throttleKey);
 
         // $user = $request->user()->load('roles.permissions');
+
+        $user = Auth::user();
+
         $user->load('roles.permissions');
         
-        $token = $user->createToken('auth_token')->plainTextToken;
-
         return response()->json([
             'message' => 'Logged in successfully!',
             'user' => new UserResource($user),
-        ])->cookie('sanctum_token', $token, 60 * 24 * 7, null, null, true, true);
+        ]);
     }
 
     public function logout(Request $request)
     {
-        //Auth::logout();
-        $request->user()->tokens()->delete(); // Revoke the current token
-        $request->session()->invalidate(); // Clear the session
-        $request->session()->regenerateToken(); // Regenerate the session token
+         // Log the user out of the web guard
+        Auth::guard('web')->logout();
+
+        // Invalidate the session on the server
+        $request->session()->invalidate();
+
+        // Regenerate the CSRF token
+        $request->session()->regenerateToken();
 
         return response()->json(['message' => 'Logged out successfully!']);
     }
