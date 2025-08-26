@@ -202,13 +202,17 @@ class ProfileController extends Controller
 
             $user->email = $request->email;
             $user->email_verification_token = Str::random(60);
+            $user->token_expires_at = now()->addDay();
             $user->email_verified_at = null;
 
             $user->save();
 
             Mail::to($request->email)->queue(new VerifyEmailMailable($user));
 
-            $user->tokens()->where('id', $user->currentAccessToken()->id)->delete();
+            Auth::guard('web')->logout();
+            session()->put('pending_email_verification', $request->email);
+            // $request->session()->invalidate();
+            // $request->session()->regenerateToken();
 
             return response()->json([
                 'message' => 'Profile updated. A new verification link has been sent to your new email address. You have been logged out for security.',

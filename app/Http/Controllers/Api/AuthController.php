@@ -37,14 +37,14 @@ class AuthController extends Controller
             'username' => $request->username,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'email_verification_token' => Str::random(60)
+            'email_verification_token' => Str::random(60),
+            'token_expires_at' => now()->addDay(),
         ]);
 
         //event(new Registered($user));
         if ( $user) {
             session()->put('pending_email_verification', $user->email);
-
-            Mail::to($user->email)->queue(new CustomVerifyEmail($user));
+            Mail::to($user->email)->queue(new VerifyEmailMailable($user));
         }
 
         return response()->json([
@@ -54,7 +54,7 @@ class AuthController extends Controller
         ], 201);
     }
 
-    public function sendVerificationEmail(Request $request)
+    public function sendVerificationEmail()
     {
         $email = session()->get('pending_email_verification');
 
@@ -62,7 +62,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'No pending email verification found.'], 404);
         }
 
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('email', $email)->first();
 
         if (!$user) {
             return response()->json(['message' => 'User not found.'], 404);
@@ -76,10 +76,9 @@ class AuthController extends Controller
         
         return response()->json(['message' => 'Verification link sent!']);
     }
-
-    public function verifyEmail (Request $request) 
+    
+    public function verifyEmail (Request $request)
     {
-
         // Validate the email and token sent from your React app
         $request->validate([
             'email' => 'required|email|exists:users,email',
@@ -89,75 +88,98 @@ class AuthController extends Controller
         // Find the user by their email
         $user = User::where('email', $request->email)->first();
 
-        if ($user && $user->email_verified_at) {
-            return response()->json(['message' => 'Email is already verified.'], 409);
+        // Check if the user is already verified
+        if ($user->hasVerifiedEmail()) {
+            throw ValidationException::withMessages([
+                'email' => 'Email is already verified.'
+            ]);
         }
 
-        // Check if the token matches
-        if (!$user || $user->email_verification_token !== $request->token) {
-            return response()->json(['message' => 'Invalid verification token.'], 401);
+        // Check if the token is valid (matches the user and is not expired)
+        // Note: You need a 'token_expires_at' column in your users table for this to work
+        if ($user->email_verification_token !== $request->token || is_null($user->token_expires_at) || now()->gt($user->token_expires_at)) {
+            throw ValidationException::withMessages([
+                'token' => 'Invalid or expired verification token.'
+            ]);
         }
 
         // Mark the user as verified
         $user->email_verified_at = now();
-        $user->email_verification_token = null; // Clear the token for security
+        $user->email_verification_token = null;
+        $user->token_expires_at = null;
         $user->save();
 
-        $user->createToken('auth_token')->plainTextToken;
+        // Log the user in to their session
+        Auth::login($user);
+
+        // Get the authenticated user and load roles/permissions
+        $authenticatedUser = Auth::user();
+        $authenticatedUser->load('roles.permissions');
 
         return response()->json([
-            'message' => 'Email verified successfully!',
-            'user' => $user,
-        ])->cookie('sanctum_token', $token, 60 * 24 * 7, null, null, true, true);
+            'message' => 'Email verified successfully! You have been logged in.',
+            'user' => new UserResource($authenticatedUser)
+        ]);
     }
 
     public function login(Request $request)
     {
+        // 1. Validate credentials
         $request->validate([
             'email' => 'required|string|email',
             'password' => 'required|string',
         ]);
 
-        $user = User::where('email', $request->email)->first();
-
-        // 1. Check if user exists and is blocked FIRST
-        if ($user && $user->isBlocked()) {
-            return response()->json([
-                'message' => 'Your account has been blocked. Please contact support.'
-            ], 403); // 403 Forbidden
-        }
-
         $throttleKey = strtolower($request->input('email')) . '|' . $request->ip();
-        $decayMinutes = 1; // Time in minutes to reset the throttle
-        $maxAttempts = 5; // Number of maximum login attempts
+        $decayMinutes = 1;
+        $maxAttempts = 5;
 
+        // 2. Check for too many login attempts
         if (RateLimiter::tooManyAttempts($throttleKey, $maxAttempts)) {
             $seconds = RateLimiter::availableIn($throttleKey);
             return response()->json([
                 'message' => 'Too many login attempts. Please try again in ' . $seconds . ' seconds.'
-            ], 429); // 429 Too Many Requests
+            ], 429);
         }
 
+        // 3. Attempt to authenticate the user
         if (!Auth::attempt($request->only('email', 'password'))) {
-            RateLimiter::hit($throttleKey, $decayMinutes * 60); // Decay in seconds
+            RateLimiter::hit($throttleKey, $decayMinutes * 60);
 
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials do not match our records.'],
             ]);
         }
 
-        // On successful login, clear the throttle counter
+        // 4. Get the authenticated user
+        $user = $request->user();
+
+        if (!$user->hasVerifiedEmail()) {
+            Auth::guard('web')->logout();
+            session()->put('pending_email_verification', $user->email);
+            throw ValidationException::withMessages([
+                'email' => 'Please verify your email to log in.'
+            ]);
+        }
+
+        // 5. Check if the authenticated user is blocked
+        if ($user->isBlocked()) {
+            Auth::guard('web')->logout();
+            // $request->session()->invalidate();
+            // Log out the blocked user
+            return response()->json([
+                'message' => 'Your account has been blocked. Please contact support.'
+            ], 403);
+        }
+
+        // 6. On successful login and no block, clear the throttle counter
         RateLimiter::clear($throttleKey);
 
-        // $user = $request->user()->load('roles.permissions');
-
-        $user = Auth::user();
-
         $user->load('roles.permissions');
-        
+
         return response()->json([
             'message' => 'Logged in successfully!',
-            'user' => new UserResource($user),
+            'user' => new UserResource($user)
         ]);
     }
 

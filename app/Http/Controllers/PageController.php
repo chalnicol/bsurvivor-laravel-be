@@ -91,61 +91,65 @@ class PageController extends Controller
         
     }
 
-    public function fetch_active_challenges()
-    {
-        // Initialize userId to null.
-        $userId = null;
-        // Check if a user is logged in and get their ID.
-
-        // if (Auth::check()) {
-        if (Auth::guard('sanctum')->check()) {
-            // $userId = Auth::id();
-            $userId = Auth::guard('sanctum')->id();
-        }
+    public function fetch_challenges(string $type)
+    {   
 
         $now = Carbon::now('UTC')->toDateString();
         // $now = Carbon::create(2025, 8, 16, 0, 0, 0, 'Asia/Manila');
+        
+        if ($type === 'active' ) {
 
-        $bracketChallenges = BracketChallenge::with('league')
-            ->where('is_public', true)
-            ->where('start_date', '<=',  $now)
-            ->where('end_date', '>=',  $now)
-            // // Conditionally eager load the entries if a user is authenticated.
-            ->when($userId, function ($query, $userId) {
-                $query->with(['entries' => function ($query) use ($userId) {
-                    $query->where('user_id', $userId);
-                }]);
-            })
-            ->orderBy('id', 'desc')
-            ->get();
+            // Initialize userId to null.
+            $userId = null;
+            // Check if a user is logged in and get their ID.
 
-        return response()->json([
-            'message' => 'Challenges fetched successfully!',
-            'challenges' => BracketChallengeResource::collection($bracketChallenges)
-        ]);
+            // if (Auth::check()) {
+            if (Auth::guard('sanctum')->check()) {
+                // $userId = Auth::id();
+                $userId = Auth::guard('sanctum')->id();
+            }
+
+            $bracketChallenges = BracketChallenge::with('league')
+                ->where('is_public', true)
+                ->where('start_date', '<=',  $now)
+                ->where('end_date', '>=',  $now)
+                // // Conditionally eager load the entries if a user is authenticated.
+                ->when($userId, function ($query, $userId) {
+                    $query->with(['entries' => function ($query) use ($userId) {
+                        $query->where('user_id', $userId);
+                    }]);
+                })
+                ->orderBy('id', 'desc')
+                ->get();
+
+            return response()->json([
+                'message' => 'Challenges fetched successfully!',
+                'challenges' => BracketChallengeResource::collection($bracketChallenges)
+            ]);
+
+        }else {
+
+            //..
+            $bracketChallenges = BracketChallenge::with(['entries' => function ($query) {
+                $query->with('user')
+                    ->orderBy('correct_predictions_count', 'desc')
+                    ->limit(10);
+            }])
+                ->where('is_public', true)
+                ->where('end_date', '<', $now)
+                ->orderBy('id', 'desc')
+                ->get();
+
+            return response()->json([
+                'message' => "Bracket challenges fetched successfully",
+                'challenges' => BracketChallengeResource::collection($bracketChallenges)
+            ]);
+        }
+        
+
+       
     }
 
-    public function fetch_ongoing_challenges () 
-    {
-
-        $now = Carbon::now('UTC')->toDateString();
-        // $now = Carbon::create(2025, 8, 19, 0, 0, 0, 'UTC')->toDateString();
-
-        $bracketChallenges = BracketChallenge::with(['entries' => function ($query) {
-            $query->with('user')
-                ->orderBy('correct_predictions_count', 'desc')
-                ->limit(10);
-        }])
-            ->where('is_public', true)
-            ->where('end_date', '<', $now)
-            ->orderBy('id', 'desc')
-            ->get();
-
-        return response()->json([
-            'message' => "Bracket challenges fetched successfully",
-            'challenges' => BracketChallengeResource::collection($bracketChallenges)
-        ]);
-    }
 
     public function get_leaderboard(Request $request, BracketChallenge $bracketChallenge)
     {

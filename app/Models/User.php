@@ -41,7 +41,8 @@ class User extends Authenticatable
         'email',
         'password',
         'is_blocked',
-        'email_verification_token'
+        'email_verification_token',
+        'token_expires_at'
     ];
 
     /**

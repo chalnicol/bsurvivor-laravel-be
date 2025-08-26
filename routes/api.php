@@ -23,14 +23,16 @@ use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
 // Public routes (no authentication required)
 Route::post('/register', [AuthController::class, 'register']);
+
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
+
 Route::post('/reset-password', [ResetPasswordController::class, 'reset'])->name('password.update');
 
-Route::get('/bracket-challenges/active', [PageController::class, 'fetch_active_challenges']);
-Route::get('/bracket-challenges/ongoing', [PageController::class, 'fetch_ongoing_challenges']);
 Route::get('/bracket-challenges/{slug}', [PageController::class, 'get_bracket_challenge']);
+
+Route::get('/get-bracket-challenges/{type}', [PageController::class, 'fetch_challenges']);
 
 Route::get('/bracket-challenge-entries/{slug}', [PageController::class, 'get_bracket_challenge_entry']);
 
@@ -40,18 +42,17 @@ Route::post('/email/verification-notification', [AuthController::class, 'sendVer
 
 Route::get('/bracket-challenges/{bracketChallenge}/leaderboard', [PageController::class, 'get_leaderboard']);
 
+// Route::middleware(['web'])->group(function () {
+//     // This is where your email verification route should go
+//     Route::post('/email/verify', [AuthController::class, 'verifyEmail'])->name('verification.verify');
+//     Route::post('/login', [AuthController::class, 'login']);
+// });
 
-Route::group(['middleware' => ['web', 'auth:sanctum']], function () {
-    // Other protected API routes that need both session and Sanctum auth...
-    
-    // This is the crucial part for broadcasting
-    Broadcast::routes();
-});
 
 // Protected routes (require authentication with Sanctum)
 Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function () {
 
-    // Broadcast::routes();
+    Broadcast::routes();
 
     Route::get('/get-unread-count', [ProfileController::class, 'getUnreadCount']);
 
