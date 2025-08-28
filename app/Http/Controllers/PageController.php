@@ -9,12 +9,17 @@ use App\Models\League;
 use App\Models\User;
 use App\Models\BracketChallenge;
 use App\Models\Team;
+use App\Models\Comment;
 use App\Models\BracketChallengeEntry;
 
 use App\Http\Resources\BracketChallengeResource;
 use App\Http\Resources\BracketChallengeEntryResource;
 use App\Http\Resources\RoundCustomResource;
+use App\Http\Resources\CommentResource;
+
 use Carbon\Carbon;
+use App\Mail\LeaveMessageMailable; // Your custom mail class 
+use Illuminate\Support\Facades\Mail; 
 
 class PageController extends Controller
 {
@@ -53,7 +58,7 @@ class PageController extends Controller
             ->where('is_public', true)
             ->first();
 
-        if ( !$bracketChallenge ) {
+        if (!$bracketChallenge ) {
             return response()->json([
                 'message' => 'Bracket Challenge not found.',
             ], 404);
@@ -68,7 +73,7 @@ class PageController extends Controller
         }
 
         // Load other relationships
-        $bracketChallenge->load('league', 'rounds.matchups.teams');
+        $bracketChallenge->load('league', 'rounds.matchups.teams', 'comments.user');
 
         // Check if the eager loaded collection is not empty
         $bracketChallengeEntry = $bracketChallenge->entries->first();
@@ -78,7 +83,10 @@ class PageController extends Controller
 
         //pass if to show leaderboard when bracket challenge end date is after the current date
         $now = Carbon::now('UTC');
-        $endDate = new Carbon($bracketChallenge->end_date)->addDay();
+
+        // $endDate = new Carbon($bracketChallenge->end_date)->addDay();
+        $endDate = $bracketChallenge->end_date->addDay();
+
 
         $showLeaderboard = $endDate->lessThan($now);
 
@@ -91,7 +99,7 @@ class PageController extends Controller
         
     }
 
-    public function fetch_challenges(string $type)
+    public function get_challenges(string $type)
     {   
 
         $now = Carbon::now('UTC')->toDateString();
@@ -150,6 +158,36 @@ class PageController extends Controller
        
     }
 
+    public function get_all_challenges(Request $request)
+    {   
+
+        $query = BracketChallenge::with('league')
+            ->where('is_public', true);
+            
+        if ($request->filled('search')) {
+            $searchTerm = '%' . strtolower(trim($request->input('search'))) . '%';
+
+            $query->where(function ($q) use ($searchTerm) {
+                // 1. Search by Bracket Entry Name
+                $q->whereRaw('LOWER(name) LIKE ?', [$searchTerm]);
+
+                $q->orWhereRaw('LOWER(MONTHNAME(start_date)) LIKE ?', [$searchTerm])
+                    ->orWhereRaw('YEAR(start_date) LIKE ?', [$searchTerm])
+                    ->orWhereRaw('LOWER(MONTHNAME(end_date)) LIKE ?', [$searchTerm])
+                    ->orWhereRaw('YEAR(end_date) LIKE ?', [$searchTerm]);
+                //
+                $q->orWhereHas('league', function ($leagueQuery) use ($searchTerm) {
+                    $leagueQuery->whereRaw('LOWER(name) LIKE ?', [$searchTerm])
+                                ->orWhereRaw('LOWER(abbr) LIKE ?', [$searchTerm]);
+                });
+            });
+        }
+
+        $bracketChallengeEntries = $query->orderBy('created_at', 'desc')->paginate(10);
+
+        return BracketChallengeResource::collection($bracketChallengeEntries);
+
+    }
 
     public function get_leaderboard(Request $request, BracketChallenge $bracketChallenge)
     {
@@ -226,7 +264,87 @@ class PageController extends Controller
         ]);
     }
 
-    
-   
+    public function leave_message(Request $request) 
+    {
+        $request->validate([
+            'message' => 'required|string|max:255',
+            'email' => 'required|email',
+            'name' => 'required|string|max:255'
+        ]);
+        
+        Mail::to('chalnicol@gmail.com')
+            ->cc($request->input('email'))
+            ->queue(new LeaveMessageMailable($request->name, $request->email, $request->message));
+        
+    }
+
+    public function add_comments_to_challenge(Request $request, BracketChallenge $bracketChallenge)
+    {
+        $request->validate([
+            'comment' => 'required|string|max:255'
+        ]);
+
+        $user = Auth::guard('sanctum')->user();
+
+        $comment = $bracketChallenge->comments()->create([
+            'body' => $request->input('comment'),
+            'user_id' => $user->id,
+        ]);
+
+        $comment->load('user');
+
+        return response()->json([
+            'message' => 'Comment added successfully.',
+            'comment' => new CommentResource($comment)
+        ]);
+
+    }
+
+    public function update_comment(Request $request, Comment $comment)
+    {
+        $request->validate([
+            'comment' => 'required|string|max:255'
+        ]);
+
+        $user = Auth::guard('sanctum')->user();
+
+        if ($comment->user_id !== $user->id) {
+            return response()->json([
+                'message' => 'You are not authorized to update this comment.'
+            ], 403);
+        }
+
+        $comment->update([
+            'body' => $request->input('comment')
+        ]);
+
+        $comment->load('user');
+
+        return response()->json([
+            'message' => 'Comment updated successfully.',
+            'comment' => new CommentResource($comment)
+        ]);
+        
+    }
+
+    public function delete_comment(Comment $comment)
+    {
+        $user = Auth::guard('sanctum')->user();
+
+        if ($comment->user_id !== $user->id) {
+            return response()->json([
+                'message' => 'You are not authorized to delete this comment.'
+            ], 403);
+        }
+
+        $comment->delete();
+
+        return response()->json([
+            'message' => 'Comment deleted successfully.'
+        ]);
+    }
+
+
+
 
 }

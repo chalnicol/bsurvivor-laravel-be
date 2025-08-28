@@ -14,6 +14,8 @@ use App\Http\Controllers\AdminPageController;
 use App\Http\Controllers\BracketChallengeController;
 use App\Http\Controllers\BracketChallengeEntryController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\ShareController;
+
 
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
@@ -30,9 +32,11 @@ Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink
 
 Route::post('/reset-password', [ResetPasswordController::class, 'reset'])->name('password.update');
 
+Route::get('/bracket-challenges', [PageController::class, 'get_all_challenges']);
+
 Route::get('/bracket-challenges/{slug}', [PageController::class, 'get_bracket_challenge']);
 
-Route::get('/get-bracket-challenges/{type}', [PageController::class, 'fetch_challenges']);
+Route::get('/get-bracket-challenges/{type}', [PageController::class, 'get_challenges']);
 
 Route::get('/bracket-challenge-entries/{slug}', [PageController::class, 'get_bracket_challenge_entry']);
 
@@ -42,17 +46,19 @@ Route::post('/email/verification-notification', [AuthController::class, 'sendVer
 
 Route::get('/bracket-challenges/{bracketChallenge}/leaderboard', [PageController::class, 'get_leaderboard']);
 
-// Route::middleware(['web'])->group(function () {
-//     // This is where your email verification route should go
-//     Route::post('/email/verify', [AuthController::class, 'verifyEmail'])->name('verification.verify');
-//     Route::post('/login', [AuthController::class, 'login']);
-// });
+Route::post('/leave-message', [PageController::class, 'leave_message']);
 
 
 // Protected routes (require authentication with Sanctum)
 Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function () {
 
     Broadcast::routes();
+
+    Route::post('/bracket-challenges/{bracketChallenge}/comment', [PageController::class, 'add_comments_to_challenge']);
+
+    Route::put('/comments/{comment}', [PageController::class, 'update_comment']);
+
+    Route::delete('/comments/{comment}', [PageController::class, 'delete_comment']);
 
     Route::get('/get-unread-count', [ProfileController::class, 'getUnreadCount']);
 
@@ -78,7 +84,6 @@ Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function 
     Route::put('/user/password', [ProfileController::class, 'update_password']);
     Route::delete('/user', [ProfileController::class, 'delete_account']);
     
-    //.admin role..
 
     Route::group(['middleware' => ['role:admin']], function () {
 

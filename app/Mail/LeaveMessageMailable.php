@@ -8,14 +8,14 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use App\Models\User;
 
-class VerifyEmailMailable extends Mailable implements ShouldQueue
+class LeaveMessageMailable extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public string $verificationUrl; // Property to hold the frontend reset URL
-    public string $userName; // Optional: To personalize the email (e.g., "Hello, [User Name]")
+    public string $sender; // Property to hold the frontend reset URL
+    public string $email;
+    public string $message;
 
     /**
      * Create a new message instance.
@@ -25,10 +25,11 @@ class VerifyEmailMailable extends Mailable implements ShouldQueue
      * @param string $userName (Optional) The user's name, if available
      * @return void
      */
-    public function __construct(string $userName, string $verificationUrl)
+    public function __construct(string $sender, string $email, string $message)
     {
-        $this->userName = $userName;
-        $this->verificationUrl = $verificationUrl;
+        $this->sender = $sender;
+        $this->email = $email;
+        $this->message = $message;
     }
 
     /**
@@ -37,7 +38,7 @@ class VerifyEmailMailable extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Verify your account - ' . config('app.name'), // Dynamic subject
+            subject: 'Message from ' . $this->sender . ' - ' . config('app.name'), // Dynamic subject
         );
     }
 
@@ -48,10 +49,11 @@ class VerifyEmailMailable extends Mailable implements ShouldQueue
     {
         return new Content(
             // markdown: 'emails.password-reset', // Use a Blade Markdown view
-            view: 'emails.custom-verify-email',
+            view: 'emails.custom-leave-message',
             with: [
-                'verificationUrl' => url($this->verificationUrl),
-                'userName' => $this->userName,
+                'sender' => $this->sender,
+                'email' => $this->email,
+                'userMessage' => $this->message,
             ]
         );
     }

@@ -3,13 +3,17 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Auth; // Import Auth facade
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail; 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Notifications\DatabaseNotification;
 
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 use App\Http\Resources\UserResource; 
 
@@ -20,15 +24,12 @@ use App\Models\BracketChallengeEntryPrediction;
 
 use App\Http\Resources\BracketChallengeEntryResource;
 use App\Http\Resources\RoundResourceCustom;
-use App\Mail\VerifyEmailMailable; // Your custom mail class 
-use App\Mail\FriendRequestSentMailable; // Your custom mail class 
-use Illuminate\Support\Facades\Mail; 
-
-use App\Notifications\FriendRequestSent; // Import the notification class
-use App\Notifications\FriendRequestReceived; // Import the notification class
-use Illuminate\Database\Eloquent\Builder;
 use App\Http\Resources\NotificationResource;
-use Illuminate\Notifications\DatabaseNotification;
+
+use App\Mail\VerifyEmailMailable; // Your custom mail class 
+use App\Notifications\FriendRequestSentNotification; // Import the notification class
+
+
 
 use Carbon\Carbon;
 
@@ -361,10 +362,7 @@ class ProfileController extends Controller
             $currentUser->friendRequestsSent()->attach($user->id, ['status' => 'pending']);
 
             //notify
-            $user->notify(new FriendRequestSent($currentUser, $user));
-
-
-
+            $user->notify(new FriendRequestSentNotification($currentUser, $user->id));
 
         }
 

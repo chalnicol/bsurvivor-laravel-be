@@ -301,13 +301,13 @@ class BracketChallengeController extends Controller
     public function updateMatchups(Request $request, BracketChallenge $bracketChallenge)
     {   
 
-
         // Check if the submission period for the challenge has ended.
         // The deadline is the end_date of the bracketChallenge.
         $now = Carbon::now('UTC');
-        // $now = Carbon::create(2025, 8, 21, 0, 0, 0, 'UTC');
+        // $now = Carbon::create(2025, 8, 29, 0, 0, 0, 'UTC');
 
-        $deadline = new Carbon($bracketChallenge->end_date)->addDay();
+        // $deadline = new Carbon($bracketChallenge->end_date)->addDay();
+        $deadline = $bracketChallenge->end_date->addDay();
 
         if ($deadline->greaterThanOrEqualTo($now)) {
             return response()->json([

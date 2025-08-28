@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class BracketChallengeEntry extends Model
 {
@@ -38,6 +39,11 @@ class BracketChallengeEntry extends Model
     public function scopeOwnedBy($query, $userId)
     {
         return $query->where('user_id', $userId);
+    }
+
+    public function comments(): MorphMany
+    {
+        return $this->morphMany(Comment::class, 'commentable');
     }
 
     

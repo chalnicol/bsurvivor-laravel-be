@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+
 
 class BracketChallenge extends Model
 {
@@ -41,6 +43,11 @@ class BracketChallenge extends Model
     public function entries()
     {
         return $this->hasMany(BracketChallengeEntry::class);
+    }
+
+    public function comments(): MorphMany
+    {
+        return $this->morphMany(Comment::class, 'commentable');
     }
 
 

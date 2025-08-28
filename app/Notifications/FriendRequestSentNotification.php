@@ -13,21 +13,21 @@ use App\Mail\FriendRequestSentMailable; // Import the Mailable
 use App\Models\User;
 
 
-class FriendRequestSent extends Notification implements ShouldBroadcast
+class FriendRequestSentNotification extends Notification implements ShouldQueue, ShouldBroadcast
 {
     use Queueable;
 
     protected $sender;
-    protected $notifiableUser;
+    protected $notifiableUserId;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(User $sender, User $notifiableUser)
+    public function __construct(User $sender, int $notifiableUserId)
     {
         //
         $this->sender = $sender;
-        $this->notifiableUser = $notifiableUser;
+        $this->notifiableUserId = $notifiableUserId;
     }
 
     /**
@@ -44,26 +44,30 @@ class FriendRequestSent extends Notification implements ShouldBroadcast
     {
         // The $this->notifiable is the recipient of the notification (the User model).
         return [
-            new PrivateChannel('users.' . $this->notifiableUser->id),
+            new PrivateChannel('users.' . $this->notifiableUserId),
         ];
-    }
-
-    public function toBroadcast(object $notifiable): array
-    {
-        $unreadCount = $this->notifiableUser->unreadNotifications()->count();
-
-        return [
-            'unread_count' => $unreadCount,
-        ];
-
     }
 
     /**
      * Get the mail representation of the notification.
      */
-    public function toMail(object $notifiable): MailMessage
+    public function toMail(object $notifiable): FriendRequestSentMailable
     {
-        //return new FriendRequestSentMailable($this->sender, $notifiable);
+        return (new FriendRequestSentMailable($this->sender, $notifiable))
+            ->to($notifiable->email);
+    }
+
+
+    
+
+    public function toBroadcast(object $notifiable): array
+    {
+        $unreadCount = $notifiable->unreadNotifications()->count();
+
+        return [
+            'unread_count' => $unreadCount,
+        ];
+
     }
 
     /**
@@ -78,7 +82,7 @@ class FriendRequestSent extends Notification implements ShouldBroadcast
             'sender_id' => $this->sender->id,
             'sender_name' => $this->sender->username,
             'message' => $this->sender->username . ' sent you a friend request.',
-            'url' => '/friends'
+            'url' => url( config('app.frontend_url') . '/friends')
         ];
     }
 

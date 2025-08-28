@@ -20,7 +20,8 @@ use Illuminate\Auth\Events\Registered;
 
 use Illuminate\Support\Str;
 
-use App\Mail\VerifyEmailMailable; // Your custom mail class 
+use App\Notifications\WelcomeUserNotification;
+use App\Notifications\VerifyEmailNotification;
 
 class AuthController extends Controller
 {
@@ -44,7 +45,8 @@ class AuthController extends Controller
         //event(new Registered($user));
         if ( $user) {
             session()->put('pending_email_verification', $user->email);
-            Mail::to($user->email)->queue(new VerifyEmailMailable($user));
+            // Mail::to($user->email)->queue(new VerifyEmailMailable($user));
+            $user->notify(new VerifyEmailNotification());
         }
 
         return response()->json([
@@ -115,6 +117,9 @@ class AuthController extends Controller
         // Get the authenticated user and load roles/permissions
         $authenticatedUser = Auth::user();
         $authenticatedUser->load('roles.permissions');
+
+        $url = '/profile';
+        $authenticatedUser->notify(new WelcomeUserNotification($url, $user->id));
 
         return response()->json([
             'message' => 'Email verified successfully! You have been logged in.',
@@ -203,9 +208,5 @@ class AuthController extends Controller
 
         return new UserResource($user);
     }
-
-
-    
-
 
 }

@@ -20,7 +20,7 @@ class UserController extends Controller
         $searchTerm = $request->query('search');
         
         // Define how many items per page
-        $perPage = 10; // You can make this configurable or pass it from the frontend
+        $perPage = 15; // You can make this configurable or pass it from the frontend
 
         $query = User::query();
 

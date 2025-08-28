@@ -22,6 +22,7 @@ use App\Mail\PasswordResetMailable;
 use App\Models\BracketChallengeEntry;
 
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 use Illuminate\Database\Eloquent\Builder;
 
@@ -177,6 +178,10 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function comments () : HasMany
+    {
+        return $this->hasMany(Comment::class);
+    }
 
 
 }

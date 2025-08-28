@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify Your Email Address</title>
+    <title>Reset Your Password</title>
     <style>
         /* Add your custom CSS here for styling and responsiveness */
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
@@ -22,12 +22,6 @@
         }
         .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #888; }
         a { color: #1f2937; text-decoration: none; }
-       
-        .url-wrapper {
-            word-wrap: break-word; /* Older browsers */
-            overflow-wrap: break-word;
-            word-break: break-all;
-        }
     </style>
 </head>
 <body>
@@ -36,22 +30,17 @@
             <h1>{{ config('app.name') }}</h1>
         </div>
         <div class="content">
-            <p>Hello {{ $userName }},</p>
-            
-            <p>Please click the button below to verify your email address and activate your account.</p>
 
-            <div class="button-container">
-                <a href="{{ $verificationUrl }}" class="button">Verify Email</a>
-            </div>
+            <p>
+                {!! nl2br(e($userMessage)) !!}
+            </p>
+            <hr>
+            <p>
+                Message from : {{ $sender }}<br/>
+                Email : {{ $email }}
+            </p>
+          
 
-            <p>If you are having trouble clicking the "Verify Email" button, copy and paste the URL below into your web browser:</p>
-            <p class="url-wrapper"><a href="{{ $verificationUrl }}">{{ $verificationUrl }}</a></p>
-
-            <p>This link will expire in 24 hours.</p>
-
-            <p>If you did not create an account, no further action is required.</p>
-
-            <p>Thanks,<br>{{ config('app.name') }}</p>
         </div>
         <div class="footer">
             <p>&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>

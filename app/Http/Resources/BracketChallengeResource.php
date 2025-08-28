@@ -33,6 +33,10 @@ class BracketChallengeResource extends JsonResource
             'rounds' => $this->whenLoaded('rounds', function () {
                 return RoundResource::collection($this->rounds);
             }),
+            'comments' => $this->whenLoaded('comments', function () {
+                return CommentResource::collection($this->comments);
+            }),
+        
             'created_at' => $this->created_at->toDateString(), // Format date,
             'updated_at' => $this->updated_at->toDateString(), // Format date,
             'entries' => $this->whenLoaded('entries', function () {

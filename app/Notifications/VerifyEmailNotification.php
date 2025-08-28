@@ -7,7 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\URL;
+use App\Mail\VerifyEmailMailable; // Import the Mailable
 
 class VerifyEmailNotification extends Notification implements ShouldQueue
 {
@@ -34,19 +34,13 @@ class VerifyEmailNotification extends Notification implements ShouldQueue
     /**
      * Get the mail representation of the notification.
      */
-    public function toMail(object $notifiable): MailMessage
+    public function toMail(object $notifiable): VerifyEmailMailable
     {
-
         // Generate the signed verification URL
-        $verificationUrl = $this->verificationUrl($notifiable);
+        $verificationUrl = config('app.frontend_url') . '/verify?token=' . $notifiable->email_verification_token . '&email=' . urlencode($notifiable->email);
 
-        // Pass the user and the URL to the custom view
-        return (new MailMessage)
-                    ->view('emails.custom-verify-email', [
-                        'user' => $notifiable,
-                        'verificationUrl' => $verificationUrl,
-                    ])
-                    ->subject('Verify Your Email Address');
+        return (new VerifyEmailMailable($notifiable->username, url($verificationUrl)))
+            ->to($notifiable->email);
     }
 
     /**
@@ -61,16 +55,5 @@ class VerifyEmailNotification extends Notification implements ShouldQueue
         ];
     }
 
-    protected function verificationUrl($notifiable)
-    {
-        // This generates the signed URL that will be sent in the email.
-        return URL::temporarySignedRoute(
-            'verification.verify',
-            Carbon::now()->addMinutes(60),
-            [
-                'id' => $notifiable->getKey(),
-                'hash' => sha1($notifiable->getEmailForVerification()),
-            ]
-        );
-    }
+   
 }
