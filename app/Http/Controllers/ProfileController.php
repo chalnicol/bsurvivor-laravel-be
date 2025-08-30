@@ -26,10 +26,8 @@ use App\Http\Resources\BracketChallengeEntryResource;
 use App\Http\Resources\RoundResourceCustom;
 use App\Http\Resources\NotificationResource;
 
-use App\Mail\VerifyEmailMailable; // Your custom mail class 
+use App\Notifications\VerifyEmailNotification;
 use App\Notifications\FriendRequestSentNotification; // Import the notification class
-
-
 
 use Carbon\Carbon;
 
@@ -205,13 +203,13 @@ class ProfileController extends Controller
             $user->email_verification_token = Str::random(60);
             $user->token_expires_at = now()->addDay();
             $user->email_verified_at = null;
-
             $user->save();
 
-            Mail::to($request->email)->queue(new VerifyEmailMailable($user));
+            $user->notify(new VerifyEmailNotification());
 
             Auth::guard('web')->logout();
             session()->put('pending_email_verification', $request->email);
+            session()->put('user_new_email', null);
             // $request->session()->invalidate();
             // $request->session()->regenerateToken();
 

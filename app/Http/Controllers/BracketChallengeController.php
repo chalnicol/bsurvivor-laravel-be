@@ -179,7 +179,7 @@ class BracketChallengeController extends Controller
     public function update(Request $request, BracketChallenge $bracketChallenge)
     {
 
-        $now = Carbon::now('UTC')->toDateString();
+        $now = Carbon::now('UTC');
 
         // Retrieve the selected league based on the ID
         $selectedLeague = $bracketChallenge->league;
@@ -203,7 +203,7 @@ class BracketChallengeController extends Controller
         } else {
             // If it has started, the start date cannot be changed.
             // It must be the same as the original start date to prevent it from moving.
-            $rules['start_date'] = 'required|date|same:' . $bracketChallenge->start_date->toDateString();
+            $rules['start_date'] = 'required|date|date_equals:' . $bracketChallenge->start_date;
         }
 
         
@@ -215,7 +215,7 @@ class BracketChallengeController extends Controller
         ];
 
         // If the challenge has already started, we must ensure the new end date is in the future.
-        if ($now->greaterThanOrEqual($bracketChallenge->start_date)) {
+        if ($now->greaterThanOrEqualTo($bracketChallenge->start_date)) {
             $rules['end_date'][] = 'after_or_equal:today';
         }
 

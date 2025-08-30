@@ -54,11 +54,20 @@ Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function 
 
     Broadcast::routes();
 
-    Route::post('/bracket-challenges/{bracketChallenge}/comment', [PageController::class, 'add_comments_to_challenge']);
+    Route::get('/bracket-challenges/{bracketChallenge}/comments', [PageController::class, 'get_challenge_comments']);
+
+    Route::post('/bracket-challenges/{bracketChallenge}/comments', [PageController::class, 'add_comments_to_challenge']);
+
 
     Route::put('/comments/{comment}', [PageController::class, 'update_comment']);
 
     Route::delete('/comments/{comment}', [PageController::class, 'delete_comment']);
+
+
+    Route::get('/comments/{parentComment}/replies', [PageController::class, 'get_replies']);
+
+    Route::post('/comments/{parentComment}/replies', [PageController::class, 'add_reply_to_comment']);
+
 
     Route::get('/get-unread-count', [ProfileController::class, 'getUnreadCount']);
 
@@ -84,7 +93,6 @@ Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function 
     Route::put('/user/password', [ProfileController::class, 'update_password']);
     Route::delete('/user', [ProfileController::class, 'delete_account']);
     
-
     Route::group(['middleware' => ['role:admin']], function () {
 
         Route::get('/admin/leagues', [LeagueController::class, 'index']);

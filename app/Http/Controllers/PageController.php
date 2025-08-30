@@ -27,13 +27,8 @@ class PageController extends Controller
     public function get_bracket_challenge_entry(string $slug) 
     {
         //..
-        $bracketChallengeEntry = BracketChallengeEntry::where('slug', $slug)->first();
-
-        if ( !$bracketChallengeEntry ) {
-            return response()->json([
-                'message' => 'Bracket Challenge Entry not found.',
-            ]);
-        }
+        $bracketChallengeEntry = BracketChallengeEntry::where('slug', $slug)
+            ->firstOrFail();
 
         $bracketChallengeEntry->load([
             'bracketChallenge.rounds.matchups.teams', 
@@ -49,52 +44,36 @@ class PageController extends Controller
     public function get_bracket_challenge(string $slug)
     {
       
-        $now =Carbon::now('UTC')->toDateString();
-
-        $bracketChallengeEntrySlug = "";
-
         //get is_public and within date range
         $bracketChallenge = BracketChallenge::where('slug', $slug)
             ->where('is_public', true)
-            ->first();
+            ->withCount('allComments')
+            ->firstOrFail();
 
-        if (!$bracketChallenge ) {
-            return response()->json([
-                'message' => 'Bracket Challenge not found.',
-            ], 404);
+        // Eager load all relationships in a single, chained call
+        $bracketChallenge->load([
+            'league',
+            'rounds.matchups.teams',
+        ]);
+
+        // Conditionally eager load the user's entry using the `with` method
+        $user = Auth::guard('sanctum')->user();
+        if ($user) {
+            $bracketChallenge->load(['entries' => fn ($query) => $query->where('user_id', $user->id)]);
         }
 
-        // Conditionally eager load the user's entry
-        if (Auth::guard('sanctum')->check()) {
-            $user = Auth::guard('sanctum')->user();
-            $bracketChallenge->load(['entries' => function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            }]);
-        }
+        $bracketChallengeEntrySlug = optional($bracketChallenge->entries->first())->slug;
 
-        // Load other relationships
-        $bracketChallenge->load('league', 'rounds.matchups.teams', 'comments.user');
-
-        // Check if the eager loaded collection is not empty
-        $bracketChallengeEntry = $bracketChallenge->entries->first();
-
-        // Pass the slug to the response if an entry was found
-        $bracketChallengeEntrySlug = $bracketChallengeEntry ? $bracketChallengeEntry->slug : null;
-
-        //pass if to show leaderboard when bracket challenge end date is after the current date
-        $now = Carbon::now('UTC');
-
-        // $endDate = new Carbon($bracketChallenge->end_date)->addDay();
-        $endDate = $bracketChallenge->end_date->addDay();
-
-
-        $showLeaderboard = $endDate->lessThan($now);
+        // Simplify the date logic using Carbon's lessThanOrEqualTo method
+        // Check if the current date is after the bracket challenge's end date
+        $isPast = $bracketChallenge->end_date->addDay()->isPast();
 
         return response()->json([
             'message' => 'Bracket Challenge fetched successfully.',
             'bracketChallenge' => new BracketChallengeResource($bracketChallenge),
             'bracketEntrySlug' => $bracketChallengeEntrySlug,
-            'showLeaderboard' => $showLeaderboard
+            'isPast' => $isPast,
+            'totalCommentsCount' => $bracketChallenge->all_comments_count,
         ]);
         
     }
@@ -278,20 +257,41 @@ class PageController extends Controller
         
     }
 
+    public function get_challenge_comments (Request $request, BracketChallenge $bracketChallenge) 
+    {
+        $perPage = 10; // Number of comments per page
+        $page = $request->query('page', 1); 
+
+        $user = Auth::guard('sanctum')->user();
+        $userId = $user ? $user->id : 0; // Use a default value if no user is authenticated
+
+        $comments = $bracketChallenge->comments()
+            ->whereNull('parent_id') // We only paginate top-level comments
+            ->withUserAndReplyCount()
+            ->orderByRaw('user_id = ? desc', [$userId])
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage, ['*'], 'page', $page);
+            // ->paginate($perPage);
+
+        // Return the paginated comments using the resource collection
+        return CommentResource::collection($comments);
+
+    }
+
     public function add_comments_to_challenge(Request $request, BracketChallenge $bracketChallenge)
     {
         $request->validate([
-            'comment' => 'required|string|max:255'
+            'body' => 'required|string|max:255'
         ]);
 
         $user = Auth::guard('sanctum')->user();
 
         $comment = $bracketChallenge->comments()->create([
-            'body' => $request->input('comment'),
+            'body' => $request->input('body'),
             'user_id' => $user->id,
         ]);
 
-        $comment->load('user');
+        $comment->setRelation('user',$user);
 
         return response()->json([
             'message' => 'Comment added successfully.',
@@ -303,7 +303,7 @@ class PageController extends Controller
     public function update_comment(Request $request, Comment $comment)
     {
         $request->validate([
-            'comment' => 'required|string|max:255'
+            'updatedBody' => 'required|string|max:255'
         ]);
 
         $user = Auth::guard('sanctum')->user();
@@ -315,7 +315,7 @@ class PageController extends Controller
         }
 
         $comment->update([
-            'body' => $request->input('comment')
+            'body' => $request->input('updatedBody')
         ]);
 
         $comment->load('user');
@@ -344,7 +344,54 @@ class PageController extends Controller
         ]);
     }
 
+    public function get_replies(Request $request, Comment $parentComment)
+    {   
+        $perPage = 5; // Number of comments per page
+        $page = $request->query('page', 1); 
 
+        $user = Auth::guard('sanctum')->user();
+        $userId = $user ? $user->id : 0; // Use a default value if no user is authenticated
+
+        $replies = $parentComment->replies()
+            ->withUserAndReplyCount()
+            ->orderByRaw('user_id = ? desc', [$userId])
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        return CommentResource::collection($replies);
+    }
+
+    public function add_reply_to_comment(Request $request, Comment $parentComment)
+    {   
+        // Check if the parent comment already has a parent (i.e., it's a reply itself)
+        if ($parentComment->parent_id !== null) {
+            return response()->json([
+                'message' => 'You cannot reply to a reply. Please reply to the original comment instead.'
+            ], 403); // 403 Forbidden status code is appropriate here
+        }
+
+        $request->validate([
+            'body' => 'required|string|max:255'
+        ]);
+
+        $user = Auth::guard('sanctum')->user();
+
+        // A reply needs the same commentable_id and type as its parent
+        $reply = $parentComment->replies()->create([
+            'body' => $request->input('body'),
+            'user_id' => $user->id,
+            'commentable_id' => $parentComment->commentable_id,
+            'commentable_type' => $parentComment->commentable_type,
+        ]);
+
+        // Set the user relationship on the reply to avoid another database query
+        $reply->setRelation('user', $user);
+
+        return response()->json([
+            'message' => 'Reply added successfully.',
+            'reply' => new CommentResource($reply)
+        ]);
+    }
 
 
 }

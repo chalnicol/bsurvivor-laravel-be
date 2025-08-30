@@ -65,16 +65,16 @@ class AuthController extends Controller
         }
 
         $user = User::where('email', $email)->first();
-
         if (!$user) {
             return response()->json(['message' => 'User not found.'], 404);
         }
 
-        if ($user && $user->email_verified_at) {
+        if ( $user->email_verified_at ) {
             return response()->json(['message' => 'Email is already verified.'], 409);
         }
-
-        Mail::to($user->email)->queue(new VerifyEmailMailable($user));
+        
+        // Mail::to($user->email)->queue(new VerifyEmailMailable($user));
+        $user->notify(new VerifyEmailNotification());
         
         return response()->json(['message' => 'Verification link sent!']);
     }
@@ -111,19 +111,14 @@ class AuthController extends Controller
         $user->token_expires_at = null;
         $user->save();
 
-        // Log the user in to their session
-        Auth::login($user);
-
-        // Get the authenticated user and load roles/permissions
-        $authenticatedUser = Auth::user();
-        $authenticatedUser->load('roles.permissions');
-
-        $url = '/profile';
-        $authenticatedUser->notify(new WelcomeUserNotification($url, $user->id));
+        if (!session()->exists('user_new_email')) {
+            $user->notify(new WelcomeUserNotification('/profile', $user->id));
+        }
+        session()->forget(['user_new_email', 'pending_email_verification']);
+       
 
         return response()->json([
-            'message' => 'Email verified successfully! You have been logged in.',
-            'user' => new UserResource($authenticatedUser)
+            'message' => 'Email verified successfully! Redirecting to login...',
         ]);
     }
 
@@ -159,15 +154,7 @@ class AuthController extends Controller
         // 4. Get the authenticated user
         $user = $request->user();
 
-        if (!$user->hasVerifiedEmail()) {
-            Auth::guard('web')->logout();
-            session()->put('pending_email_verification', $user->email);
-            throw ValidationException::withMessages([
-                'email' => 'Please verify your email to log in.'
-            ]);
-        }
-
-        // 5. Check if the authenticated user is blocked
+        // Check if the authenticated user is blocked
         if ($user->isBlocked()) {
             Auth::guard('web')->logout();
             // $request->session()->invalidate();
@@ -177,9 +164,27 @@ class AuthController extends Controller
             ], 403);
         }
 
-        // 6. On successful login and no block, clear the throttle counter
+        if (!$user->hasVerifiedEmail()) {
+
+            $user->email_verification_token = Str::random(60);
+            $user->token_expires_at = now()->addDay();
+            $user->save();
+
+            $user->notify(new VerifyEmailNotification());
+
+            Auth::guard('web')->logout();
+            
+            session()->put('pending_email_verification', $user->email);
+
+            throw ValidationException::withMessages([
+                'email' => 'Unverified email. A verification link has been sent to your email.'
+            ]);
+        }
+
+        // On successful login and no block, clear the throttle counter
         RateLimiter::clear($throttleKey);
 
+        
         $user->load('roles.permissions');
 
         return response()->json([

@@ -28,6 +28,7 @@ class CommentResource extends JsonResource
 
             // Conditionally load replies if they're eager loaded and not an empty collection
             'replies' => CommentResource::collection($this->whenLoaded('replies')),
+            'replies_count' => $this->when(isset($this->replies_count), $this->replies_count),
         ];
     }
 }
