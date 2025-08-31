@@ -364,42 +364,43 @@ class ProfileController extends Controller
 
         }
 
-        //return friends..
-        $currentUser->load(['friendsOfMine','friendOf', 'friendRequestsSent', 'friendRequestsReceived']);
-
-        $friends = $currentUser->friendsOfMine->merge($currentUser->friendOf);
-
-       
         return response()->json([
             'message' => "Friends have been updated successfully.",
-            'friends' => [
-                'active_friends' => $friends,
-                'pending_friends' => $currentUser->friendRequestsSent,
-                'to_accept_friends' => $currentUser->friendRequestsReceived,
-                'blocked_friends' => []
-            ]
         ], 200);
 
     }
 
-    public function get_friends()
+    public function get_friends(Request $request)
     {
         $user = Auth::user();
 
-        // Eager load both relationships in a single query.
-        $user->load(['friendsOfMine','friendOf', 'friendRequestsSent', 'friendRequestsReceived']);
+        $type = $request->query('type', 'active');
+    
+        if ( $type === 'active') {
+            $user->load(['friendsOfMine', 'friendOf']);
+            $friends = $user->friendsOfMine->merge($user->friendOf);
 
-        $friends = $user->friendsOfMine->merge($user->friendOf);
+            return response()->json([
+                'message' => 'Friends fetched successfully.',
+                'friends' => $friends
+            ]);
 
-        return response()->json([
-            'message' => 'Friends fetched successfully.',
-            'friends' => [
-                'active_friends' => $friends,
-                'pending_friends' => $user->friendRequestsSent,
-                'to_accept_friends' => $user->friendRequestsReceived,
-                'blocked_friends' => []
-            ]
-        ], 200);
+        }else if ( $type === 'received') {
+            $user->load('friendRequestsReceived');
+
+            return response()->json([
+                'message' => 'Friends fetched successfully.',
+                'friends' => $user->friendRequestsReceived
+            ]);
+
+        }else if ( $type === 'sent') {
+            $user->load('friendRequestsSent');
+            return response()->json([
+                'message' => 'Friends fetched successfully.',
+                'friends' => $user->friendRequestsSent
+            ]);
+        }
+
     }
 
     public function search_users(Request $request) 
@@ -416,12 +417,12 @@ class ProfileController extends Controller
 
         $currentUser = Auth::user();
 
-        //$currentUser->load('friends', 'friendRequestsSent', 'friendRequestsReceived');
+        // Eager load all friendship-related relationships for the current user
+        $currentUser->load(['friendsOfMine', 'friendOf', 'friendRequestsSent', 'friendRequestsReceived']);
 
         // Get the users from the database, excluding the current user.
         $users = User::where(function ($query) use ($searchTerm) {
-            $query->where('username', 'like', '%' . $searchTerm . '%')
-                ->orWhere('email', 'like', '%' . $searchTerm . '%');
+            $query->where('username', 'like', '%' . $searchTerm . '%');
         })
         // ->whereNotIn('id', $excludeIds)
         ->where('id', '!=', $currentUser->id)
@@ -429,10 +430,29 @@ class ProfileController extends Controller
         ->limit(5)
         ->get();
 
+        // Now, map the users and check their friendship status
         $mappedUsers = $users->map(function ($user) use ($currentUser) {
+
+            $status = 'not_friends';
+
+            // Check if the user is a friend
+            $isFriend = $currentUser->friendsOfMine->contains($user) || $currentUser->friendOf->contains($user);
+            if ($isFriend) {
+                $status = 'friends';
+            } 
+            // Check for sent friend requests
+            else if ($currentUser->friendRequestsSent->contains($user)) {
+                $status = 'request_sent';
+            }
+            // Check for received friend requests
+            else if ($currentUser->friendRequestsReceived->contains($user)) {
+                $status = 'request_received';
+            }
+            
             return [
                 'id' => $user->id,
                 'username' => $user->username,
+                'status' => $status,
             ];
         });
 

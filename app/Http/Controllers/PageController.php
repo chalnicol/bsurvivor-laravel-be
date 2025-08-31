@@ -170,7 +170,9 @@ class PageController extends Controller
 
     public function get_leaderboard(Request $request, BracketChallenge $bracketChallenge)
     {
+
         $user = Auth::guard('sanctum')->user();
+      
         $type = $request->input('type');
 
         if (!$bracketChallenge) {
@@ -187,6 +189,11 @@ class PageController extends Controller
             // Assuming you have a `friends` relationship on your User model
             //$friendIds = $user->friends()->pluck('id')->toArray();
             //$query->whereIn('user_id', $friendIds);
+            if (!$user) {
+                return response()->json([
+                    "message" => 'User not found.'
+                ], 404);
+            }
 
             $friends = $user->friendsOfMine->merge($user->friendOf);
             $friendIds = $friends->pluck('id')->toArray();
@@ -199,43 +206,46 @@ class PageController extends Controller
             ->limit(10)
             ->get();
 
-        // Fetch the current user's entry (relevant to the applied filter)
-        $userEntry = BracketChallengeEntry::where('bracket_challenge_id', $bracketChallenge->id)
-            ->where('user_id', $user->id)
-            ->with('user')
-            ->first();
-        
-        // Check if user's entry is not null and not in the top 10 of the filtered list
-        if ($userEntry) {
-            if (!$topEntries->contains('user_id', $user->id)) {
+        if ($user) {
+            // Fetch the current user's entry (relevant to the applied filter)
+            $userEntry = BracketChallengeEntry::where('bracket_challenge_id', $bracketChallenge->id)
+                ->where('user_id', $user->id)
+                ->with('user')
+                ->first();
+            
+            // Check if user's entry is not null and not in the top 10 of the filtered list
+            if ($userEntry) {
 
-                // Calculate user's rank within the specific leaderboard (Global or Friends)
-                $rankQuery = BracketChallengeEntry::where('bracket_challenge_id', $bracketChallenge->id);
+                if (!$topEntries->contains('user_id', $user->id)) {
 
-                if ($type == 'friends') {
-                    // Filter the rank query by friends only
-                    //$friendIds = $user->friends()->pluck('id')->toArray();
-                    $friends = $user->friendsOfMine->merge($user->friendOf);
-                    $friendIds = $friends->pluck('id')->toArray();
-                    $rankQuery->whereIn('user_id', $friendIds);
+                    // Calculate user's rank within the specific leaderboard (Global or Friends)
+                    $rankQuery = BracketChallengeEntry::where('bracket_challenge_id', $bracketChallenge->id);
+
+                    if ($type == 'friends') {
+                        // Filter the rank query by friends only
+                        //$friendIds = $user->friends()->pluck('id')->toArray();
+                        $friends = $user->friendsOfMine->merge($user->friendOf);
+                        $friendIds = $friends->pluck('id')->toArray();
+                        $rankQuery->whereIn('user_id', $friendIds);
+                    }
+
+                    // The rank calculation must also respect the custom sort order
+                    $userRank = $rankQuery->orderByRaw("CASE WHEN status = 'won' THEN 3 WHEN status = 'active' THEN 2 WHEN status = 'eliminated' THEN 1 ELSE 0 END DESC")
+                        ->orderBy('correct_predictions_count', 'desc')
+                        ->get()
+                        ->search(function ($item) use ($user) {
+                            return $item->user_id == $user->id;
+                        }) + 1;
+                    
+                    $userEntry->rank = $userRank;
+                    $userEntry->is_current_user_entry = true;
+
+                    // Add the user's entry to the collection
+                    $topEntries->push($userEntry);
                 }
-
-                // The rank calculation must also respect the custom sort order
-                $userRank = $rankQuery->orderByRaw("CASE WHEN status = 'won' THEN 3 WHEN status = 'active' THEN 2 WHEN status = 'eliminated' THEN 1 ELSE 0 END DESC")
-                    ->orderBy('correct_predictions_count', 'desc')
-                    ->get()
-                    ->search(function ($item) use ($user) {
-                        return $item->user_id == $user->id;
-                    }) + 1;
-                
-                $userEntry->rank = $userRank;
-                $userEntry->is_current_user_entry = true;
-
-                // Add the user's entry to the collection
-                $topEntries->push($userEntry);
             }
         }
-
+        
         return response()->json([
             'message' => 'Top entries fetched successfully.',
             'id' => $bracketChallenge->id,
@@ -265,13 +275,19 @@ class PageController extends Controller
         $user = Auth::guard('sanctum')->user();
         $userId = $user ? $user->id : 0; // Use a default value if no user is authenticated
 
-        $comments = $bracketChallenge->comments()
+        $query = $bracketChallenge->comments()
+            ->withCount(['likesOnly', 'dislikesOnly'])
             ->whereNull('parent_id') // We only paginate top-level comments
-            ->withUserAndReplyCount()
-            ->orderByRaw('user_id = ? desc', [$userId])
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage, ['*'], 'page', $page);
-            // ->paginate($perPage);
+            ->withUserAndReplyCount();
+
+        if ($user) {
+            $query->with('myVote');
+        }
+
+        $comments = $query->orderByRaw('user_id = ? desc', [$userId])
+                        ->orderBy('created_at', 'desc')
+                        ->paginate($perPage, ['*'], 'page', $page);
+        
 
         // Return the paginated comments using the resource collection
         return CommentResource::collection($comments);
@@ -352,11 +368,23 @@ class PageController extends Controller
         $user = Auth::guard('sanctum')->user();
         $userId = $user ? $user->id : 0; // Use a default value if no user is authenticated
 
-        $replies = $parentComment->replies()
-            ->withUserAndReplyCount()
-            ->orderByRaw('user_id = ? desc', [$userId])
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage, ['*'], 'page', $page);
+        // $replies = $parentComment->replies()
+        //     ->withUserAndReplyCount()
+        //     ->orderByRaw('user_id = ? desc', [$userId])
+        //     ->orderBy('created_at', 'desc')
+        //     ->paginate($perPage, ['*'], 'page', $page);
+     
+        $query = $parentComment->replies()
+            ->withCount(['likesOnly', 'dislikesOnly'])
+            ->withUserAndReplyCount();
+
+        if ($user) {
+            $query->with('myVote');
+        }
+
+        $replies = $query->orderByRaw('user_id = ? desc', [$userId])
+                        ->orderBy('created_at', 'desc')
+                        ->paginate($perPage, ['*'], 'page', $page);
 
         return CommentResource::collection($replies);
     }

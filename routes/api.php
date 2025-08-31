@@ -15,6 +15,8 @@ use App\Http\Controllers\BracketChallengeController;
 use App\Http\Controllers\BracketChallengeEntryController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ShareController;
+use App\Http\Controllers\LikeController;
+
 
 
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
@@ -49,24 +51,29 @@ Route::get('/bracket-challenges/{bracketChallenge}/leaderboard', [PageController
 Route::post('/leave-message', [PageController::class, 'leave_message']);
 
 
+
 // Protected routes (require authentication with Sanctum)
 Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function () {
 
     Broadcast::routes();
 
+    // Route::post('/bracket-challenge-entries/{post}/like', [LikeController::class, 'toggleLike']);
+
+
     Route::get('/bracket-challenges/{bracketChallenge}/comments', [PageController::class, 'get_challenge_comments']);
 
     Route::post('/bracket-challenges/{bracketChallenge}/comments', [PageController::class, 'add_comments_to_challenge']);
-
 
     Route::put('/comments/{comment}', [PageController::class, 'update_comment']);
 
     Route::delete('/comments/{comment}', [PageController::class, 'delete_comment']);
 
-
     Route::get('/comments/{parentComment}/replies', [PageController::class, 'get_replies']);
 
     Route::post('/comments/{parentComment}/replies', [PageController::class, 'add_reply_to_comment']);
+
+    Route::post('/comments/{likeable}/votes', [LikeController::class, 'toggleVote']);
+
 
 
     Route::get('/get-unread-count', [ProfileController::class, 'getUnreadCount']);
