@@ -3,20 +3,21 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
-use App\Models\User;
-use App\Mail\WelcomeUserMailable;
 use Illuminate\Broadcasting\PrivateChannel;
 
-class WelcomeUserNotification extends Notification implements ShouldQueue, ShouldBroadcast
+use Illuminate\Notifications\Notification;
+use App\Mail\PasswordResetSuccessMailable; // Import the Mailable
+
+class PasswordResetSuccess extends Notification implements ShouldQueue, ShouldBroadcast
 {
     use Queueable;
 
     protected $notifiableUserId;
     protected $url;
+
     /**
      * Create a new notification instance.
      */
@@ -33,7 +34,7 @@ class WelcomeUserNotification extends Notification implements ShouldQueue, Shoul
      */
     public function via(object $notifiable): array
     {
-        return ['database', 'mail', 'broadcast'];
+        return ['database', 'broadcast', 'mail'];
     }
 
     public function broadcastOn(): array
@@ -47,13 +48,15 @@ class WelcomeUserNotification extends Notification implements ShouldQueue, Shoul
     /**
      * Get the mail representation of the notification.
      */
-    public function toMail(object $notifiable): WelcomeUserMailable
+    public function toMail(object $notifiable): PasswordResetSuccessMailable
     {
         $url = url(config('app.frontend_url') . $this->url);
 
-        return (new WelcomeUserMailable($notifiable->username, $url))
+        return (new PasswordResetSuccessMailable($notifiable->username, $url))
             ->to($notifiable->email);
+        
     }
+
 
     public function toBroadcast(object $notifiable): array
     {
@@ -66,15 +69,17 @@ class WelcomeUserNotification extends Notification implements ShouldQueue, Shoul
     }
 
     /**
-     * Get the array representation of the notification.
+     * Get the array representation of the notification for the database channel.
      *
-     * @return array<string, mixed>
+     * @param  mixed  $notifiable
+     * @return array
      */
-    public function toArray(object $notifiable): array
+    public function toDatabase($notifiable)
     {
         return [
-            'message' => 'Welcome to ' . config('app.name') . '!',
-            'url' => url(config('app.frontend_url') . $this->url),
+            'message' => 'Your have updated your password successfully.',
+            'url' => url( config('app.frontend_url') . $this->url)
         ];
     }
+
 }

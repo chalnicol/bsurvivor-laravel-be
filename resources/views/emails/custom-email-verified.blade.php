@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to {{ config('app.name') }}</title>
+    <title>Verify Your Email Address</title>
     <style>
         /* Add your custom CSS here for styling and responsiveness */
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
@@ -22,7 +22,7 @@
         }
         .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #888; }
         a { color: #1f2937; text-decoration: none; }
-
+       
         .url-wrapper {
             word-wrap: break-word; /* Older browsers */
             overflow-wrap: break-word;
@@ -36,19 +36,18 @@
             <h1>{{ config('app.name') }}</h1>
         </div>
         <div class="content">
-            <p>Hello, {{ $username }}!</p>
+            <p>Hello {{ $userName }},</p>
             
-            <p>Thank you for registering. We are excited to have you as a member of our community!</p>
+            <p>Your new email address has been successfully verified.</p>
 
             <div class="button-container">
-                <a href="{{ $url }}" class="button">
-                    Get Started
-                </a>
+                <a href="{{ $url }}" class="button">View Profile</a>
             </div>
 
-            <p>If you are having trouble clicking the "Get Started" button, copy and paste the URL below into your web browser:</p>
+            <p>If you are having trouble clicking the "View Profile" button, copy and paste the URL below into your web browser:</p>
             <p class="url-wrapper"><a href="{{ $url }}">{{ $url }}</a></p>
 
+           
             <p>Thanks,<br>{{ config('app.name') }}</p>
         </div>
         <div class="footer">

@@ -8,6 +8,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Password; // Keep this
 use Illuminate\Validation\ValidationException; // Keep this
 
+use App\Models\User; // Ensure you have this line to reference the User model
+use App\Notifications\PasswordResetSuccess;
+
 class ResetPasswordController extends Controller
 {
    
@@ -29,7 +32,6 @@ class ResetPasswordController extends Controller
                 $user->forceFill([
                     'password' => bcrypt($password), // Use bcrypt for hashing
                 ])->save();
-
                 // Optionally dispatch an event if needed
                 // event(new \Illuminate\Auth\Events\PasswordReset($user));
             }
@@ -85,6 +87,13 @@ class ResetPasswordController extends Controller
      */
     protected function sendResetResponse(Request $request, string $response): JsonResponse
     {
+
+        $user = User::where('email', $request->email)->first();
+        
+        if ($user) {
+            $user->notify(new PasswordResetSuccess($user->id, '/profile'));
+        }
+
         return response()->json(['message' => __($response)], 200);
     }
 

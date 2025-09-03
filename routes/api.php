@@ -17,13 +17,7 @@ use App\Http\Controllers\PageController;
 use App\Http\Controllers\ShareController;
 use App\Http\Controllers\LikeController;
 
-
-
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
-
-// Route::get('/user', function (Request $request) {
-//     return $request->user();
-// })->middleware('auth:sanctum');
+// use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
 // Public routes (no authentication required)
 Route::post('/register', [AuthController::class, 'register']);
@@ -50,30 +44,31 @@ Route::get('/bracket-challenges/{bracketChallenge}/leaderboard', [PageController
 
 Route::post('/leave-message', [PageController::class, 'leave_message']);
 
+//comments
+// Route::get('/bracket-challenges/{bracketChallenge}/comments', [PageController::class, 'get_challenge_comments']);
 
+Route::get('/{resourceType}/{resourceId}/comments', [PageController::class, 'get_comments'])
+    ->whereIn('resourceType', ['bracket-challenges', 'bracket-challenge-entries']);
+
+Route::get('/comments/{parentComment}/replies', [PageController::class, 'get_replies']);
 
 // Protected routes (require authentication with Sanctum)
 Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function () {
 
     Broadcast::routes();
 
-    // Route::post('/bracket-challenge-entries/{post}/like', [LikeController::class, 'toggleLike']);
+    // Route::post('/bracket-challenges/{bracketChallenge}/comments', [PageController::class, 'add_comments_to_challenge']);
 
-
-    Route::get('/bracket-challenges/{bracketChallenge}/comments', [PageController::class, 'get_challenge_comments']);
-
-    Route::post('/bracket-challenges/{bracketChallenge}/comments', [PageController::class, 'add_comments_to_challenge']);
+    Route::post('/{resourceType}/{resourceId}/comments', [PageController::class, 'add_comment'])
+    ->whereIn('resourceType', ['bracket-challenges', 'bracket-challenge-entries']);
 
     Route::put('/comments/{comment}', [PageController::class, 'update_comment']);
 
     Route::delete('/comments/{comment}', [PageController::class, 'delete_comment']);
 
-    Route::get('/comments/{parentComment}/replies', [PageController::class, 'get_replies']);
-
     Route::post('/comments/{parentComment}/replies', [PageController::class, 'add_reply_to_comment']);
 
     Route::post('/comments/{likeable}/votes', [LikeController::class, 'toggleVote']);
-
 
 
     Route::get('/get-unread-count', [ProfileController::class, 'getUnreadCount']);
@@ -90,15 +85,22 @@ Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function 
 
     Route::post('/friends-action', [ProfileController::class, 'friends_action']);
 
+    Route::get('/user/bracket-challenge-entries', [ProfileController::class, 'get_bracket_challenge_entries']);
+
+    Route::post('/user/bracket-challenge-entries', [ProfileController::class, 'post_bracket_challenge_entry']);
+
+    //auth protected routes..
+    
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::get('/user', [AuthController::class, 'user']); // Get authenticated user's details
 
-    Route::get('/user/bracket-challenge-entries', [ProfileController::class, 'get_bracket_challenge_entries']);
-    Route::post('/user/bracket-challenge-entries', [ProfileController::class, 'post_bracket_challenge_entry']);
-    Route::put('/user/profile', [ProfileController::class, 'update_profile']);
-    Route::put('/user/password', [ProfileController::class, 'update_password']);
-    Route::delete('/user', [ProfileController::class, 'delete_account']);
+    Route::put('/user/profile', [AuthController::class, 'update_profile']);
+
+    Route::put('/user/password', [AuthController::class, 'update_password']);
+
+    Route::delete('/user', [AuthController::class, 'delete_account']);
+
     
     Route::group(['middleware' => ['role:admin']], function () {
 

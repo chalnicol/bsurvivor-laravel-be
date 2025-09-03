@@ -49,7 +49,7 @@ class BracketChallengeEntryController extends Controller
             });
         }
 
-        $bracketChallengeEntries = $query->orderBy('created_at', 'desc')->paginate(10);
+        $bracketChallengeEntries = $query->orderBy('id', 'desc')->paginate(10);
 
         return BracketChallengeEntryResource::collection($bracketChallengeEntries);
     }

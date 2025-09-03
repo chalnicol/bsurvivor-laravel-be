@@ -5,6 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+
+use Illuminate\Support\Facades\Mail; 
+
 use App\Models\League;
 use App\Models\User;
 use App\Models\BracketChallenge;
@@ -17,9 +22,9 @@ use App\Http\Resources\BracketChallengeEntryResource;
 use App\Http\Resources\RoundCustomResource;
 use App\Http\Resources\CommentResource;
 
-use Carbon\Carbon;
 use App\Mail\LeaveMessageMailable; // Your custom mail class 
-use Illuminate\Support\Facades\Mail; 
+
+use Carbon\Carbon;
 
 class PageController extends Controller
 {
@@ -28,6 +33,7 @@ class PageController extends Controller
     {
         //..
         $bracketChallengeEntry = BracketChallengeEntry::where('slug', $slug)
+            ->withCount('allComments')
             ->firstOrFail();
 
         $bracketChallengeEntry->load([
@@ -37,7 +43,12 @@ class PageController extends Controller
             'predictions'
         ]);
 
-        return new BracketChallengeEntryResource($bracketChallengeEntry);
+        // return new BracketChallengeEntryResource($bracketChallengeEntry);
+        return response()->json([
+            'message' => "Bracket Challenge Entry fetched successfully",
+            'entry' => new BracketChallengeEntryResource($bracketChallengeEntry),
+            'totalCommentsCount' => $bracketChallengeEntry->all_comments_count
+        ]);
 
     }
 
@@ -48,6 +59,7 @@ class PageController extends Controller
         $bracketChallenge = BracketChallenge::where('slug', $slug)
             ->where('is_public', true)
             ->withCount('allComments')
+            ->withCount('entries')
             ->firstOrFail();
 
         // Eager load all relationships in a single, chained call
@@ -107,6 +119,7 @@ class PageController extends Controller
                     }]);
                 })
                 ->orderBy('id', 'desc')
+                ->limit(3)
                 ->get();
 
             return response()->json([
@@ -125,6 +138,7 @@ class PageController extends Controller
                 ->where('is_public', true)
                 ->where('end_date', '<', $now)
                 ->orderBy('id', 'desc')
+                ->limit(3)
                 ->get();
 
             return response()->json([
@@ -267,54 +281,145 @@ class PageController extends Controller
         
     }
 
-    public function get_challenge_comments (Request $request, BracketChallenge $bracketChallenge) 
+    public function get_comments(Request $request, string $resourceType, int $resourceId)
     {
-        $perPage = 10; // Number of comments per page
+        // Define the query for the comments relationship
+        $commentsQuery = null;
+
+        // Determine the resource type and find the corresponding model
+        if ($resourceType === 'bracket-challenges') {
+            $bracketChallenge = BracketChallenge::findOrFail($resourceId);
+            $commentsQuery = $bracketChallenge->comments();
+        } elseif ($resourceType === 'bracket-challenge-entries') {
+            $bracketChallengeEntry = BracketChallengeEntry::findOrFail($resourceId);
+            $commentsQuery = $bracketChallengeEntry->comments();
+        } else {
+            // Handle invalid resourceType gracefully
+            return response()->json(['error' => 'Invalid resource type.'], 404);
+        }
+        
+        // Ensure the query is an instance of a relationship
+        if (!$commentsQuery instanceof MorphMany) {
+            return response()->json(['error' => 'Resource does not have a comments relationship.'], 500);
+        }
+
+        // Existing comment retrieval logic
+        $perPage = 10;
         $page = $request->query('page', 1); 
 
         $user = Auth::guard('sanctum')->user();
-        $userId = $user ? $user->id : 0; // Use a default value if no user is authenticated
+        $userId = $user ? $user->id : 0;
 
-        $query = $bracketChallenge->comments()
+        $query = $commentsQuery
             ->withCount(['likesOnly', 'dislikesOnly'])
-            ->whereNull('parent_id') // We only paginate top-level comments
+            ->whereNull('parent_id')
             ->withUserAndReplyCount();
 
         if ($user) {
             $query->with('myVote');
         }
 
-        $comments = $query->orderByRaw('user_id = ? desc', [$userId])
-                        ->orderBy('created_at', 'desc')
-                        ->paginate($perPage, ['*'], 'page', $page);
+        $comments = $query
+            ->orderByRaw('user_id = ? desc', [$userId])
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage, ['*'], 'page', $page);
         
-
         // Return the paginated comments using the resource collection
         return CommentResource::collection($comments);
-
     }
 
-    public function add_comments_to_challenge(Request $request, BracketChallenge $bracketChallenge)
+    public function add_comment(Request $request, string $resourceType, int $resourceId)
     {
+        // Validate the request body
         $request->validate([
             'body' => 'required|string|max:255'
         ]);
 
-        $user = Auth::guard('sanctum')->user();
+        // Determine the model based on the resource type
+        $model = null;
+        $resource = null;
 
-        $comment = $bracketChallenge->comments()->create([
+        if ($resourceType === 'bracket-challenges') {
+            $model = BracketChallenge::class;
+        } elseif ($resourceType === 'bracket-challenge-entries') {
+            $model = BracketChallengeEntry::class;
+        } else {
+            return response()->json(['error' => 'Invalid resource type.'], 404);
+        }
+        
+        // Find the resource instance or fail
+        try {
+            $resource = $model::findOrFail($resourceId);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Resource not found.'], 404);
+        }
+        
+        // Authenticate the user
+        $user = Auth::guard('sanctum')->user();
+        
+        // Create the comment using the polymorphic relationship
+        $comment = $resource->comments()->create([
             'body' => $request->input('body'),
             'user_id' => $user->id,
         ]);
 
-        $comment->setRelation('user',$user);
+        // Set the user relation for the resource and response
+        $comment->setRelation('user', $user);
 
         return response()->json([
             'message' => 'Comment added successfully.',
             'comment' => new CommentResource($comment)
         ]);
-
     }
+
+    // public function get_comments (Request $request, BracketChallenge $bracketChallenge) 
+    // {
+    //     $perPage = 10; // Number of comments per page
+    //     $page = $request->query('page', 1); 
+
+    //     $user = Auth::guard('sanctum')->user();
+    //     $userId = $user ? $user->id : 0; // Use a default value if no user is authenticated
+
+    //     $query = $bracketChallenge->comments()
+    //         ->withCount(['likesOnly', 'dislikesOnly'])
+    //         ->whereNull('parent_id') // We only paginate top-level comments
+    //         ->withUserAndReplyCount();
+
+    //     if ($user) {
+    //         $query->with('myVote');
+    //     }
+
+    //     $comments = $query->orderByRaw('user_id = ? desc', [$userId])
+    //                     ->orderBy('created_at', 'desc')
+    //                     ->paginate($perPage, ['*'], 'page', $page);
+        
+
+    //     // Return the paginated comments using the resource collection
+    //     return CommentResource::collection($comments);
+
+    // }
+
+    // public function add_comments_to_challenge(Request $request, BracketChallenge $bracketChallenge)
+    // {
+    //     $request->validate([
+    //         'body' => 'required|string|max:255'
+    //     ]);
+
+    //     $user = Auth::guard('sanctum')->user();
+
+    //     $comment = $bracketChallenge->comments()->create([
+    //         'body' => $request->input('body'),
+    //         'user_id' => $user->id,
+    //     ]);
+
+    //     $comment->setRelation('user',$user);
+
+    //     return response()->json([
+    //         'message' => 'Comment added successfully.',
+    //         'comment' => new CommentResource($comment)
+    //     ]);
+
+    // }
 
     public function update_comment(Request $request, Comment $comment)
     {

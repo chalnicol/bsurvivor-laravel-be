@@ -37,8 +37,8 @@ class BracketChallengeEntryResource extends JsonResource
                 ];
             }),
             'predictions' => BracketChallengeEntryPredictionResource::collection($this->whenLoaded('predictions')),
-            'created_at' => $this->created_at->toDateString(), // Format date,
-            'updated_at' => $this->updated_at->toDateString(), // Format date,'
+            'created_at' => $this->created_at, // Format date,
+            'updated_at' => $this->updated_at, // Format date,'
             
         ];
     }

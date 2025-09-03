@@ -28,14 +28,6 @@ class BracketChallengeController extends Controller
     {
         $query = BracketChallenge::with('league');
 
-        // Example: Only show public challenges by default
-        //$query->where('is_public', true);
-
-        // // Example: Allow filtering by league_id from query parameters
-        // if ($request->has('league_id')) {
-        //     $query->where('league_id', $request->input('league_id'));
-        // }
-
         // Example: Allow searching by name
         if ($request->has('search')) {
             $query->where('name', 'like', '%' . $request->input('search') . '%');
@@ -43,7 +35,9 @@ class BracketChallengeController extends Controller
 
         // Pagination: This will automatically wrap the results in a 'data' array
         // and include 'meta' and 'links' for pagination information.
-        $bracketChallenges = $query->paginate(15); // Paginate with 15 items per page
+        $bracketChallenges = $query
+            ->orderByDesc('id')
+            ->paginate(15); // Paginate with 15 items per page
 
         // Return a collection of resources, which automatically handles pagination wrapping
         return BracketChallengeResource::collection($bracketChallenges);

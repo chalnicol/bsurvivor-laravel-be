@@ -43,6 +43,14 @@ class BracketChallengeEntry extends Model
 
     public function comments(): MorphMany
     {
+        return $this->morphMany(Comment::class, 'commentable')->whereNull('parent_id');
+    }
+
+    /**
+     * Get ALL comments (top-level and replies) for the challenge.
+     */
+    public function allComments(): MorphMany
+    {
         return $this->morphMany(Comment::class, 'commentable');
     }
 

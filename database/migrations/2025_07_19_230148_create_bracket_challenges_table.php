@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('name')->unique();
             $table->string('description')->nullable();
             $table->boolean('is_public')->default(false); // Whether the challenge is public or private
+           
             $table->json('bracket_data')->nullable();
             $table->date('start_date');
             $table->date('end_date');

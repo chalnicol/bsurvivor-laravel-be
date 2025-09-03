@@ -25,8 +25,8 @@ class BracketChallengeResource extends JsonResource
             'is_public' => $this->is_public,
             // 'start_date' => $this->start_date,
             // 'end_date' => $this->end_date,
-            'start_date' => $this->start_date->toDateString(), // Format date
-            'end_date' => $this->end_date->toDateString(),     // Format date
+            'start_date' => $this->start_date, // Format date
+            'end_date' => $this->end_date,     // Format date
             'league_id' => $this->league_id,
             'league' => $this->whenLoaded('league', $this->league->abbr),
             'bracket_data' => $this->bracket_data,
@@ -37,14 +37,16 @@ class BracketChallengeResource extends JsonResource
                 return CommentResource::collection($this->comments);
             }),
         
-            'created_at' => $this->created_at->toDateString(), // Format date,
-            'updated_at' => $this->updated_at->toDateString(), // Format date,
+            'created_at' => $this->created_at, // Format date,
+            'updated_at' => $this->updated_at, // Format date,
             'entries' => $this->whenLoaded('entries', function () {
                 return BracketChallengeEntryResource::collection($this->entries);
             }),
-            $this->mergeWhen(Auth::guard('sanctum')->check(), [
-                'has_entry' => $this->entries->isNotEmpty(),
-            ]),
+            'entries_count' => $this->when(isset($this->entries_count), $this->entries_count),
+            
+            // $this->mergeWhen(Auth::guard('sanctum')->check(), [
+            //     'has_entry' => $this->entries->isNotEmpty(),
+            // ]),
         ];
     }
 }
