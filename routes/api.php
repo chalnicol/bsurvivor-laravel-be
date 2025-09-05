@@ -24,6 +24,8 @@ Route::post('/register', [AuthController::class, 'register']);
 
 Route::post('/login', [AuthController::class, 'login']);
 
+Route::get('/users/{username}', [PageController::class, 'get_user']);
+
 Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
 
 Route::post('/reset-password', [ResetPasswordController::class, 'reset'])->name('password.update');

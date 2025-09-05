@@ -21,6 +21,8 @@ use App\Http\Resources\BracketChallengeResource;
 use App\Http\Resources\BracketChallengeEntryResource;
 use App\Http\Resources\RoundCustomResource;
 use App\Http\Resources\CommentResource;
+use App\Http\Resources\UserMiniResource;
+
 
 use App\Mail\LeaveMessageMailable; // Your custom mail class 
 
@@ -29,6 +31,45 @@ use Carbon\Carbon;
 class PageController extends Controller
 {
     //
+    public function get_user(string $username) {
+
+        $user = User::where('username', $username)->firstOrFail();
+
+        $entries = $user->entries()
+            ->with('bracketChallenge.league')
+            ->orderBy('correct_predictions_count', 'desc')
+            ->orderBy('id', 'desc')
+            ->limit(5)
+            ->get();
+        
+        return response()->json([
+            'message' => 'User fetched successfully',
+            'user' => new UserMiniResource($user),
+            'entries' => BracketChallengeEntryResource::collection($entries)
+        ]);
+        
+        // $areFriends = false;
+        // $isMe = false;
+
+        // if (Auth::guard('sanctum')->check()) {
+        //     $authUser = Auth::guard('sanctum')->user();
+
+        //     $isMe = ($authUser->id === $user->id);
+
+        //     if (!$isMe) {
+        //         // Optimized: Use a direct database query to check for friendship
+        //         $areFriends = (bool) $authUser->friendsOfMine()->where('friend_id', $user->id)
+        //                                     ->orWhere(function ($query) use ($user, $authUser) {
+        //                                         $query->where('user_id', $user->id)
+        //                                             ->where('friend_id', $authUser->id);
+        //                                     })
+        //                                     ->exists();
+        //     }
+
+        // }
+
+    }
+
     public function get_bracket_challenge_entry(string $slug) 
     {
         //..
@@ -371,55 +412,6 @@ class PageController extends Controller
             'comment' => new CommentResource($comment)
         ]);
     }
-
-    // public function get_comments (Request $request, BracketChallenge $bracketChallenge) 
-    // {
-    //     $perPage = 10; // Number of comments per page
-    //     $page = $request->query('page', 1); 
-
-    //     $user = Auth::guard('sanctum')->user();
-    //     $userId = $user ? $user->id : 0; // Use a default value if no user is authenticated
-
-    //     $query = $bracketChallenge->comments()
-    //         ->withCount(['likesOnly', 'dislikesOnly'])
-    //         ->whereNull('parent_id') // We only paginate top-level comments
-    //         ->withUserAndReplyCount();
-
-    //     if ($user) {
-    //         $query->with('myVote');
-    //     }
-
-    //     $comments = $query->orderByRaw('user_id = ? desc', [$userId])
-    //                     ->orderBy('created_at', 'desc')
-    //                     ->paginate($perPage, ['*'], 'page', $page);
-        
-
-    //     // Return the paginated comments using the resource collection
-    //     return CommentResource::collection($comments);
-
-    // }
-
-    // public function add_comments_to_challenge(Request $request, BracketChallenge $bracketChallenge)
-    // {
-    //     $request->validate([
-    //         'body' => 'required|string|max:255'
-    //     ]);
-
-    //     $user = Auth::guard('sanctum')->user();
-
-    //     $comment = $bracketChallenge->comments()->create([
-    //         'body' => $request->input('body'),
-    //         'user_id' => $user->id,
-    //     ]);
-
-    //     $comment->setRelation('user',$user);
-
-    //     return response()->json([
-    //         'message' => 'Comment added successfully.',
-    //         'comment' => new CommentResource($comment)
-    //     ]);
-
-    // }
 
     public function update_comment(Request $request, Comment $comment)
     {

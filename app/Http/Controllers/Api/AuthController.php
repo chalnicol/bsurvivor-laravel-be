@@ -32,13 +32,15 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            'username' => 'required|string|max:15|min:5|unique:users',
+            'username' => 'required|string||max:15|min:5|alpha_dash|unique:users',
+            'fullname' => 'required|string|max:255|regex:/^[-a-zA-Z0-9_ ]+$/',
             'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed', // 'confirmed' checks for password_confirmation field
+            'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', // 'confirmed' checks for password_confirmation field
         ]);
 
         $user = User::create([
             'username' => $request->username,
+            'fullname' => $request->fullname,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'email_verification_token' => Str::random(60),
@@ -226,13 +228,16 @@ class AuthController extends Controller
         $user = $request->user(); // Get the authenticated user
 
         $request->validate([
-            'username' => 'required|string|min:5|max:15|unique:users,username,' . $user->id,
+            'username' => 'required|string||max:15|min:5|alpha_dash|unique:users,username,' . $user->id,
+            'fullname' => 'required|string|max:255|regex:/^[-a-zA-Z0-9_ ]+$/',
             'email' => 'required|string|email|max:255|unique:users,email,'. $user->id,
         ]);
 
+       
         $isEmailNew = $user->email !== $request->email;
 
         $user->username = $request->username;
+        $user->fullname = $request->fullname;
 
         if ( $isEmailNew  ) {
 

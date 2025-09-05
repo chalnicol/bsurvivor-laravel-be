@@ -20,30 +20,35 @@ class UserSeeder extends Seeder
            
             [
                 "username" => "adminUser",
+                "fullname" => "Admin User",
                 "email" => "admin@example.com",
                 "password" => Hash::make('asdfasdf'), // Use a secure password
                 "email_verified_at" => now(), // Set email as verified
             ],
             [
                 "username" => "charlou",
+                "fullname" => "Charlou Nicolas",
                 "email" => "charlou@example.com",
                 "password" => Hash::make('asdfasdf'), // Use a secure password
                 "email_verified_at" => now(), // Set email as verified
             ],
             [
                 "username" => "nong",
+                "fullname" => "Nong Nicolas",
                 "email" => "nong@example.com",
                 "password" => Hash::make('asdfasdf'), // Use a secure password
                 "email_verified_at" => now(), // Set email as verified
             ],
             [
-                "username" => "nongers",
+                "username" => "rogernicol",
+                "fullname" => "Roger Nicolas",
                 "email" => "nongers@example.com",
                 "password" => Hash::make('asdfasdf'), // Use a secure password
                 "email_verified_at" => now(), // Set email as verified
             ],
             [
-                "username" => "charles",
+                "username" => "charlie",
+                "fullname" => "Charlie Nicolas",
                 "email" => "charles@example.com",
                 "password" => Hash::make('asdfasdf'), // Use a secure password
                 "email_verified_at" => now(), // Set email as verified
@@ -56,8 +61,10 @@ class UserSeeder extends Seeder
                 [
                     'username' => $user['username'],
                     'email' => $user['email'],
+                
                 ],
                 [
+                    'fullname' => $user['fullname'],
                     'password' => $user['password'],
                     'email_verified_at' => $user['email_verified_at'], // Set email verification timestamp
                 ]

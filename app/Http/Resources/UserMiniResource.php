@@ -18,6 +18,7 @@ class UserMiniResource extends JsonResource
         return [
             'id' => $this->id,
             'username' => $this->username,
+            'fullname' => $this->fullname,
         ];
     }
 }

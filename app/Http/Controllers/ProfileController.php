@@ -292,30 +292,34 @@ class ProfileController extends Controller
 
         $type = $request->query('type', 'active');
     
+        $user->loadCount(['friendsOfMine', 'friendOf', 'friendRequestsSent', 'friendRequestsReceived']);
+
+        $friendsCount = [
+            'active' => $user->friends_of_mine_count + $user->friend_of_count,
+            'sent' => $user->friend_requests_sent_count,
+            'received' => $user->friend_requests_received_count,
+        ];
+
+        $friends = collect();
+
         if ( $type === 'active') {
             $user->load(['friendsOfMine', 'friendOf']);
             $friends = $user->friendsOfMine->merge($user->friendOf);
 
-            return response()->json([
-                'message' => 'Friends fetched successfully.',
-                'friends' => $friends
-            ]);
-
         }else if ( $type === 'received') {
             $user->load('friendRequestsReceived');
-
-            return response()->json([
-                'message' => 'Friends fetched successfully.',
-                'friends' => $user->friendRequestsReceived
-            ]);
+            $friends = $user->friendRequestsReceived;
 
         }else if ( $type === 'sent') {
             $user->load('friendRequestsSent');
-            return response()->json([
-                'message' => 'Friends fetched successfully.',
-                'friends' => $user->friendRequestsSent
-            ]);
+            $friends = $user->friendRequestsSent;
         }
+    
+        return response()->json([
+            'message' => 'Friends fetched successfully.',
+            'friends' => $friends,
+            'count' => $friendsCount,
+        ]);
 
     }
 
@@ -338,7 +342,8 @@ class ProfileController extends Controller
 
         // Get the users from the database, excluding the current user.
         $users = User::where(function ($query) use ($searchTerm) {
-            $query->where('username', 'like', '%' . $searchTerm . '%');
+            $query->where('username', 'like', '%' . $searchTerm . '%')
+                ->orWhere('fullname', 'like', '%' . $searchTerm . '%');
         })
         // ->whereNotIn('id', $excludeIds)
         ->where('id', '!=', $currentUser->id)
