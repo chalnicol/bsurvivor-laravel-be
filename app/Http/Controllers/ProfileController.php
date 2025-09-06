@@ -289,10 +289,28 @@ class ProfileController extends Controller
     public function get_friends(Request $request)
     {
         $user = Auth::user();
-
         $type = $request->query('type', 'active');
-    
-        $user->loadCount(['friendsOfMine', 'friendOf', 'friendRequestsSent', 'friendRequestsReceived']);
+        
+        // Use an array to build the relationships to load dynamically
+        $relationsToLoad = ['friendsOfMine', 'friendOf', 'friendRequestsSent', 'friendRequestsReceived'];
+        
+        // Create an empty collection for friends
+        $friends = collect();
+
+        // Only load the specific relationship based on the type
+        if ($type === 'active') {
+            $user->load(['friendsOfMine', 'friendOf']);
+            $friends = $user->friendsOfMine->merge($user->friendOf);
+        } else if ($type === 'received') {
+            $user->load('friendRequestsReceived');
+            $friends = $user->friendRequestsReceived;
+        } else if ($type === 'sent') {
+            $user->load('friendRequestsSent');
+            $friends = $user->friendRequestsSent;
+        }
+
+        // Now, get the counts, but only once and after loading the data
+        $user->loadCount($relationsToLoad);
 
         $friendsCount = [
             'active' => $user->friends_of_mine_count + $user->friend_of_count,
@@ -300,32 +318,16 @@ class ProfileController extends Controller
             'received' => $user->friend_requests_received_count,
         ];
 
-        $friends = collect();
-
-        if ( $type === 'active') {
-            $user->load(['friendsOfMine', 'friendOf']);
-            $friends = $user->friendsOfMine->merge($user->friendOf);
-
-        }else if ( $type === 'received') {
-            $user->load('friendRequestsReceived');
-            $friends = $user->friendRequestsReceived;
-
-        }else if ( $type === 'sent') {
-            $user->load('friendRequestsSent');
-            $friends = $user->friendRequestsSent;
-        }
-    
         return response()->json([
             'message' => 'Friends fetched successfully.',
             'friends' => $friends,
             'count' => $friendsCount,
         ]);
-
     }
 
+   
     public function search_users(Request $request) 
     {
-
         $searchTerm = $request->input('search', "");
 
         if (empty($searchTerm)) {
@@ -337,51 +339,72 @@ class ProfileController extends Controller
 
         $currentUser = Auth::user();
 
-        // Eager load all friendship-related relationships for the current user
-        $currentUser->load(['friendsOfMine', 'friendOf', 'friendRequestsSent', 'friendRequestsReceived']);
-
-        // Get the users from the database, excluding the current user.
+        // Use withExists() for performance instead of eager loading
         $users = User::where(function ($query) use ($searchTerm) {
-            $query->where('username', 'like', '%' . $searchTerm . '%')
-                ->orWhere('fullname', 'like', '%' . $searchTerm . '%');
-        })
-        // ->whereNotIn('id', $excludeIds)
-        ->where('id', '!=', $currentUser->id)
-        ->orderBy('id', 'desc')
-        ->limit(5)
-        ->get();
+                $query->where('username', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('fullname', 'like', '%' . $searchTerm . '%');
+            })
+            ->where('id', '!=', $currentUser->id)
+            // Check for an existing friendship in either direction
+            ->withExists(['friendsOfMine as is_friends' => function ($query) use ($currentUser) {
+                $query->where('friend_id', $currentUser->id);
+            }])
+            ->withExists(['friendOf as is_friend_of' => function ($query) use ($currentUser) {
+                $query->where('user_id', $currentUser->id);
+            }])
+            ->withExists(['friendOf as is_friends_of_me' => function ($query) use ($currentUser) {
+                $query->where('user_id', $currentUser->id);
+            }])
+            // This checks if the currentUser has SENT a request to the user being searched.
+            // It's a received request from the perspective of the searched user.
+            ->withExists(['friendRequestsReceived as request_sent_by_me' => function ($query) use ($currentUser) {
+                $query->where('user_id', $currentUser->id);
+            }])
+            // This checks if the currentUser has RECEIVED a request from the user being searched.
+            // It's a sent request from the perspective of the searched user.
+            ->withExists(['friendRequestsSent as request_received_by_me' => function ($query) use ($currentUser) {
+                $query->where('friend_id', $currentUser->id);
+            }])
+            ->limit(20) // Use a higher limit for a more comprehensive sort
+            ->get();
 
-        // Now, map the users and check their friendship status
-        $mappedUsers = $users->map(function ($user) use ($currentUser) {
-
+        // Map the users and determine their friendship status
+        $mappedUsers = $users->map(function ($user) {
             $status = 'not_friends';
 
-            // Check if the user is a friend
-            $isFriend = $currentUser->friendsOfMine->contains($user) || $currentUser->friendOf->contains($user);
-            if ($isFriend) {
+            // Check if a friendship exists in either direction
+            if ($user->is_friends || $user->is_friend_of) {
                 $status = 'friends';
-            } 
-            // Check for sent friend requests
-            else if ($currentUser->friendRequestsSent->contains($user)) {
-                $status = 'request_sent';
             }
-            // Check for received friend requests
-            else if ($currentUser->friendRequestsReceived->contains($user)) {
+            // Correct logic: Check if a request has been received by the current user
+            else if ($user->request_received_by_me) {
                 $status = 'request_received';
+            } 
+            // Correct logic: Check if a request has been sent by the current user
+            else if ($user->request_sent_by_me) {
+                $status = 'request_sent';
             }
             
             return [
                 'id' => $user->id,
                 'username' => $user->username,
+                'fullname' => $user->fullname,
                 'status' => $status,
             ];
-        });
+        })->sortBy(function ($user) {
+            // Assign a numerical value for sorting to get the desired order
+            return match ($user['status']) {
+                'friends' => 1,
+                'request_received' => 2,
+                'request_sent' => 3,
+                'not_friends' => 4,
+            };
+        })->values(); // Re-index the collection after sorting
 
         return response()->json([
             'message' => 'Users fetched successfully.',
             'users' => $mappedUsers,
         ]);
-
     }
 
     public function getUnreadCount()

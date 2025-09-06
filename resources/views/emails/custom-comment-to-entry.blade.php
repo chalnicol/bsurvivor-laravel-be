@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify Your Email Address</title>
+    <title>User Comment To Entry</title>
     <style>
         /* Add your custom CSS here for styling and responsiveness */
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
@@ -36,15 +36,15 @@
             <h1>{{ config('app.name') }}</h1>
         </div>
         <div class="content">
-            <p>Hello {{ $userName }},</p>
+            <p>Hello {{ $user }},</p>
             
-            <p>The "{{ $challengeName }}" Bracket Challenge has been updated. You can now view the status of your entry.</p>
+            <p>Your bracket challenge entry <strong>{{ $entryName }}</strong> just received a new comment from <strong>{{ $sender }}</strong>!</p>
             
             <div class="button-container">
-                <a href="{{ $url }}" class="button">View Challenge Entry</a>
+                <a href="{{ $url }}" class="button">View Comment</a>
             </div>
 
-            <p>If you are having trouble clicking the "View Challenge Entry" button, copy and paste the URL below into your web browser:</p>
+            <p>If you are having trouble clicking the "View Comment" button, copy and paste the URL below into your web browser:</p>
             <p class="url-wrapper"><a href="{{ $url }}">{{ $url }}</a></p>
 
             <p>Thanks,<br>{{ config('app.name') }}</p>

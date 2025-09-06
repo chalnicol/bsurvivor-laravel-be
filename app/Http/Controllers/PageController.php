@@ -23,6 +23,7 @@ use App\Http\Resources\RoundCustomResource;
 use App\Http\Resources\CommentResource;
 use App\Http\Resources\UserMiniResource;
 
+use App\Notifications\CommentToEntry;
 
 use App\Mail\LeaveMessageMailable; // Your custom mail class 
 
@@ -31,7 +32,8 @@ use Carbon\Carbon;
 class PageController extends Controller
 {
     //
-    public function get_user(string $username) {
+    public function get_user(string $username) 
+    {
 
         $user = User::where('username', $username)->firstOrFail();
 
@@ -406,6 +408,18 @@ class PageController extends Controller
 
         // Set the user relation for the resource and response
         $comment->setRelation('user', $user);
+
+        //get entry user and notify user who made comment..
+        if ( $resourceType === 'bracket-challenge-entries' ) {
+
+            $entryUser = $resource->user;
+            
+            $username = $entryUser->id === $user->id ? 'you' : $user->username;
+
+            $entryUser->notify(new CommentToEntry($entryUser->id, $username, $resource));
+        }
+
+        
 
         return response()->json([
             'message' => 'Comment added successfully.',

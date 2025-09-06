@@ -9,22 +9,33 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Broadcasting\PrivateChannel;
 
 use Illuminate\Notifications\Notification;
-use App\Mail\PasswordResetSuccessMailable; // Import the Mailable
+use App\Mail\CommentToEntryMailable; // Import the Mailable
 
-class PasswordResetSuccess extends Notification implements ShouldQueue, ShouldBroadcast
+use App\Models\BracketChallengeEntry;
+
+class CommentToEntry extends Notification implements ShouldQueue, ShouldBroadcast
 {
     use Queueable;
 
     protected $notifiableUserId;
-    protected $url;
+    protected $sender;
+    protected $entryName;
+    protected $entryUrl;
+
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(int $notifiableUserId, string $url)
+    public function __construct(int $notifiableUserId, string $sender, BracketChallengeEntry $entry )
     {
+      
+        // $this->entry = $entry;
         $this->notifiableUserId = $notifiableUserId;
-        $this->url = $url;
+        $this->sender = $sender;
+        $this->entryName = $entry->name;
+
+        $this->entryUrl = url( config('app.frontend_url') . '/bracket-challenge-entries/'. $entry->slug );
+
     }
 
     /**
@@ -34,7 +45,7 @@ class PasswordResetSuccess extends Notification implements ShouldQueue, ShouldBr
      */
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast', 'mail'];
+        return ['database', 'mail', 'broadcast'];
     }
 
     public function broadcastOn(): array
@@ -48,13 +59,12 @@ class PasswordResetSuccess extends Notification implements ShouldQueue, ShouldBr
     /**
      * Get the mail representation of the notification.
      */
-    public function toMail(object $notifiable): PasswordResetSuccessMailable
+    public function toMail(object $notifiable): CommentToEntryMailable
     {
-        $url = url(config('app.frontend_url') . $this->url);
-
-        return (new PasswordResetSuccessMailable($notifiable->username, $url))
-            ->to($notifiable->email);
         
+
+        return (new CommentToEntryMailable($this->sender, $notifiable->username, $this->entryName, $this->entryUrl ))
+            ->to($notifiable->email);
     }
 
 
@@ -77,8 +87,10 @@ class PasswordResetSuccess extends Notification implements ShouldQueue, ShouldBr
     public function toDatabase($notifiable)
     {
         return [
-            'message' => 'You have updated your password successfully.',
-            'url' => url( config('app.frontend_url') . $this->url)
+            'sender' => $this->sender,
+            'entryName' => $this->entryName,
+            'message' => 'Your bracket challenge entry '. $this->entryName .' just received a new comment from '. $this->sender .'!.',
+            'url' => $this->entryUrl
         ];
     }
 
