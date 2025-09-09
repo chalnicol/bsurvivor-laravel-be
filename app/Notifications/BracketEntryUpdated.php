@@ -83,7 +83,7 @@ class BracketEntryUpdated extends Notification implements ShouldQueue, ShouldBro
     public function toDatabase($notifiable)
     {
         return [
-            'message' => '"'. $this->challengeName . '" Bracket Challenge has been updated.',
+            'message' => '"'. $this->challengeName . '" bracket challenge has been updated.',
             'url' => $this->entryUrl
         ];
     }

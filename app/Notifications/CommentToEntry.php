@@ -89,7 +89,7 @@ class CommentToEntry extends Notification implements ShouldQueue, ShouldBroadcas
         return [
             'sender' => $this->sender,
             'entryName' => $this->entryName,
-            'message' => 'Your bracket challenge entry '. $this->entryName .' just received a new comment from '. $this->sender .'!.',
+            'message' => 'Your entry '. $this->entryName .' has a new comment from '. $this->sender .'!',
             'url' => $this->entryUrl
         ];
     }

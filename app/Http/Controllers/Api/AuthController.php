@@ -32,10 +32,13 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            'username' => 'required|string||max:15|min:5|alpha_dash|unique:users',
-            'fullname' => 'required|string|max:255|regex:/^[-a-zA-Z0-9_ ]+$/',
+            'username' => 'required|string|max:15|min:5|alpha_dash|unique:users',
+            'fullname' => 'required|string|min:5|max:255|regex:/^[-a-zA-Z0-9_ ]+$/',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', // 'confirmed' checks for password_confirmation field
+        ], [
+            'username.alpha_dash' => 'Invalid username format. Please check rules and try again.',
+            'fullname.regex' => 'Invalid Full Name format. Please check rules and try again.'
         ]);
 
         $user = User::create([

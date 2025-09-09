@@ -59,6 +59,34 @@ class BracketChallenge extends Model
         return $this->morphMany(Comment::class, 'commentable');
     }
 
+    public function likes(): MorphMany
+    {
+        return $this->morphMany(Like::class, 'likeable');
+    }
+
+    public function myVote()
+    {
+        if (auth()->check()) {
+            return $this->morphOne(Like::class, 'likeable')
+                        ->where('user_id', auth()->id());
+        }
+
+        // If no user is authenticated, return a query that will always be empty
+        // This prevents any SQL errors and returns an empty relationship
+        return $this->morphOne(Like::class, 'likeable')
+                    ->whereRaw('1 = 0'); // A condition that is always false
+    }
+
+    public function likesOnly()
+    {
+        return $this->morphMany(Like::class, 'likeable')->where('is_like', true);
+    }
+
+    public function dislikesOnly()
+    {
+        return $this->morphMany(Like::class, 'likeable')->where('is_like', false);
+    }
+
 
   
 }

@@ -59,6 +59,9 @@ Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function 
 
     Broadcast::routes();
 
+    // Route::post('/comments/{likeable}/votes', [LikeController::class, 'toggleVote']);
+    Route::post ('/likes', [LikeController::class, 'toggleVote']);
+    
     // Route::post('/bracket-challenges/{bracketChallenge}/comments', [PageController::class, 'add_comments_to_challenge']);
 
     Route::post('/{resourceType}/{resourceId}/comments', [PageController::class, 'add_comment'])
@@ -70,7 +73,7 @@ Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function 
 
     Route::post('/comments/{parentComment}/replies', [PageController::class, 'add_reply_to_comment']);
 
-    Route::post('/comments/{likeable}/votes', [LikeController::class, 'toggleVote']);
+    
 
 
     Route::get('/get-unread-count', [ProfileController::class, 'getUnreadCount']);

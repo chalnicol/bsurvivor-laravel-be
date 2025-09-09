@@ -19,6 +19,7 @@ class FriendRequestSentNotification extends Notification implements ShouldQueue,
 
     protected $sender;
     protected $notifiableUserId;
+    protected $url;
 
     /**
      * Create a new notification instance.
@@ -28,6 +29,7 @@ class FriendRequestSentNotification extends Notification implements ShouldQueue,
         //
         $this->sender = $sender;
         $this->notifiableUserId = $notifiableUserId;
+        $this->url = url( config('app.frontend_url') . '/friends?tab=received');
     }
 
     /**
@@ -53,12 +55,9 @@ class FriendRequestSentNotification extends Notification implements ShouldQueue,
      */
     public function toMail(object $notifiable): FriendRequestSentMailable
     {
-        return (new FriendRequestSentMailable($this->sender, $notifiable))
+        return (new FriendRequestSentMailable($this->sender->username, $notifiable->username, $this->url ))
             ->to($notifiable->email);
     }
-
-
-    
 
     public function toBroadcast(object $notifiable): array
     {
@@ -81,8 +80,8 @@ class FriendRequestSentNotification extends Notification implements ShouldQueue,
         return [
             'sender_id' => $this->sender->id,
             'sender_name' => $this->sender->username,
-            'message' => $this->sender->username . ' sent you a friend request.',
-            'url' => url( config('app.frontend_url') . '/friends')
+            'message' => 'You received a friend request from ' . $this->sender->username .'.',
+            'url' => $this->url,
         ];
     }
 

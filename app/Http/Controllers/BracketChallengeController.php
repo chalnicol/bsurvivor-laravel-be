@@ -37,6 +37,8 @@ class BracketChallengeController extends Controller
         // and include 'meta' and 'links' for pagination information.
         $bracketChallenges = $query
             ->orderByDesc('id')
+            // ->withCount('allComments')
+            // ->withCount('entries')
             ->paginate(15); // Paginate with 15 items per page
 
         // Return a collection of resources, which automatically handles pagination wrapping

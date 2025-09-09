@@ -37,48 +37,66 @@ class PageController extends Controller
 
         $user = User::where('username', $username)->firstOrFail();
 
+        $friendshipStatus = "not_authenticated";
+
+        if (Auth::guard('sanctum')->check()) {
+
+            $authUser = Auth::guard('sanctum')->user();
+
+
+            if ($authUser->id === $user->id) {
+                $friendshipStatus = 'me';
+            
+            } else {
+                // Check if they are friends
+                if ($authUser->friendsOfMine->contains($user) || $authUser->friendOf->contains($user)) {
+                    $friendshipStatus = 'friends';
+                }
+                // Check if a friend request has been sent from the auth user to the viewed user
+                else if ($authUser->friendRequestsSent->contains($user)) {
+                    $friendshipStatus = 'pending_sent';
+                }
+                // Check if a friend request has been received by the auth user from the viewed user
+                else if ($authUser->friendRequestsReceived->contains($user)) {
+                    $friendshipStatus = 'pending_received';
+                }else {
+                    $friendshipStatus = 'not_friends';
+                }
+            }
+           
+          
+        }
+
         $entries = $user->entries()
             ->with('bracketChallenge.league')
             ->orderBy('correct_predictions_count', 'desc')
             ->orderBy('id', 'desc')
             ->limit(5)
             ->get();
-        
+
         return response()->json([
             'message' => 'User fetched successfully',
             'user' => new UserMiniResource($user),
-            'entries' => BracketChallengeEntryResource::collection($entries)
+            'entries' => BracketChallengeEntryResource::collection($entries),
+            'friendshipStatus' => $friendshipStatus
         ]);
-        
-        // $areFriends = false;
-        // $isMe = false;
-
-        // if (Auth::guard('sanctum')->check()) {
-        //     $authUser = Auth::guard('sanctum')->user();
-
-        //     $isMe = ($authUser->id === $user->id);
-
-        //     if (!$isMe) {
-        //         // Optimized: Use a direct database query to check for friendship
-        //         $areFriends = (bool) $authUser->friendsOfMine()->where('friend_id', $user->id)
-        //                                     ->orWhere(function ($query) use ($user, $authUser) {
-        //                                         $query->where('user_id', $user->id)
-        //                                             ->where('friend_id', $authUser->id);
-        //                                     })
-        //                                     ->exists();
-        //     }
-
-        // }
 
     }
 
     public function get_bracket_challenge_entry(string $slug) 
     {
-        //..
-        $bracketChallengeEntry = BracketChallengeEntry::where('slug', $slug)
-            ->withCount('allComments')
-            ->firstOrFail();
+        $user = Auth::guard('sanctum')->user();
 
+        //..
+        $query = BracketChallengeEntry::where('slug', $slug)
+            ->withCount(['allComments', 'likesOnly', 'dislikesOnly']);
+
+        if ($user) {
+            $query->with('myVote');
+        }
+
+        $bracketChallengeEntry = $query->firstOrFail();
+       
         $bracketChallengeEntry->load([
             'bracketChallenge.rounds.matchups.teams', 
             'bracketChallenge.league', 
@@ -98,12 +116,18 @@ class PageController extends Controller
     public function get_bracket_challenge(string $slug)
     {
       
+        $user = Auth::guard('sanctum')->user();
+
         //get is_public and within date range
-        $bracketChallenge = BracketChallenge::where('slug', $slug)
+        $query = BracketChallenge::where('slug', $slug)
             ->where('is_public', true)
-            ->withCount('allComments')
-            ->withCount('entries')
-            ->firstOrFail();
+            ->withCount(['allComments', 'entries', 'likesOnly', 'dislikesOnly']);
+            
+        if ($user) {
+            $query->with('myVote');
+        }
+
+        $bracketChallenge = $query->firstOrFail();
 
         // Eager load all relationships in a single, chained call
         $bracketChallenge->load([
@@ -112,7 +136,7 @@ class PageController extends Controller
         ]);
 
         // Conditionally eager load the user's entry using the `with` method
-        $user = Auth::guard('sanctum')->user();
+       
         if ($user) {
             $bracketChallenge->load(['entries' => fn ($query) => $query->where('user_id', $user->id)]);
         }
@@ -219,7 +243,7 @@ class PageController extends Controller
             });
         }
 
-        $bracketChallengeEntries = $query->orderBy('created_at', 'desc')->paginate(10);
+        $bracketChallengeEntries = $query->orderBy('created_at', 'desc')->paginate(1);
 
         return BracketChallengeResource::collection($bracketChallengeEntries);
 

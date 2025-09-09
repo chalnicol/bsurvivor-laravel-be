@@ -8,7 +8,6 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use App\Models\User;
 
 class FriendRequestSentMailable extends Mailable implements ShouldQueue
 {
@@ -16,14 +15,16 @@ class FriendRequestSentMailable extends Mailable implements ShouldQueue
 
     public $sender;
     public $recipient;
+    public $url;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(User $sender, User $recipient)
+    public function __construct(string $sender, string $recipient, string $url)
     {
         $this->sender = $sender;
         $this->recipient = $recipient;
+        $this->url = $url;
     }
 
     /**
@@ -32,7 +33,7 @@ class FriendRequestSentMailable extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Friend Request from ' . $this->sender->name,
+            subject: 'Friend Request Received from ' . $this->sender,
         );
     }
 
@@ -45,9 +46,9 @@ class FriendRequestSentMailable extends Mailable implements ShouldQueue
             // markdown: 'emails.password-reset', // Use a Blade Markdown view
             view: 'emails.custom-friend-request',
             with: [
-                '$recipient' => $this->recipient->name,
-                '$sender' => $this->sender->name,
-                '$url' => url('/friends'),
+                '$recipient' => $this->recipient,
+                '$sender' => $this->sender,
+                '$url' => $this->url,
             ]
         );      
     }

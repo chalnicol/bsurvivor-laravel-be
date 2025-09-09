@@ -324,7 +324,6 @@ class ProfileController extends Controller
             'count' => $friendsCount,
         ]);
     }
-
    
     public function search_users(Request $request) 
     {
@@ -394,10 +393,10 @@ class ProfileController extends Controller
         })->sortBy(function ($user) {
             // Assign a numerical value for sorting to get the desired order
             return match ($user['status']) {
-                'friends' => 1,
-                'request_received' => 2,
-                'request_sent' => 3,
-                'not_friends' => 4,
+                'friends' => 2,
+                'request_received' => 3,
+                'request_sent' => 4,
+                'not_friends' => 1,
             };
         })->values(); // Re-index the collection after sorting
 

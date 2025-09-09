@@ -147,6 +147,7 @@ class User extends Authenticatable
             })
             ->exists();
     }
+
     public function friendsOfMine(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'friendships', 'user_id', 'friend_id')
@@ -184,6 +185,11 @@ class User extends Authenticatable
     public function comments () : HasMany
     {
         return $this->hasMany(Comment::class);
+    }
+
+    public function likes() : HasMany
+    {
+        return $this->hasMany(Like::class);
     }
 
 
