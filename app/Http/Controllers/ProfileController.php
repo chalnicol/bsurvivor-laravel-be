@@ -77,7 +77,7 @@ class ProfileController extends Controller
             });
         }
 
-        $bracketChallengeEntries = $query->orderBy('created_at', 'desc')->paginate(10);
+        $bracketChallengeEntries = $query->orderBy('created_at', 'desc')->paginate(5);
 
         return BracketChallengeEntryResource::collection($bracketChallengeEntries);
     }
@@ -406,34 +406,12 @@ class ProfileController extends Controller
         ]);
     }
 
-    public function getUnreadCount()
-    {
+   
 
-        if (!Auth::guard('sanctum')->check()) {
-            return response()->json([
-                'count' => 0,
-            ]);
-        }
+   
 
-        $user = Auth::guard('sanctum')->user();
 
-        $unreadCount = $user->unreadNotifications()->count();
 
-        return response()->json([
-            'count' => $unreadCount,
-        ]);
-    }
-
-    public function get_notifications()
-    {
-        $user = Auth::user();
-
-        // Get all notifications for the user
-        $notifications = $user->notifications()->latest()->paginate(10);
-
-        return NotificationResource::collection($notifications);
-
-    }
 
     public function mark_read_notification (Request $request)
     {

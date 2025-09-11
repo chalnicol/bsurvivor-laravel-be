@@ -36,7 +36,7 @@ class BracketChallengeResource extends JsonResource
             'comments' => $this->whenLoaded('comments', function () {
                 return CommentResource::collection($this->comments);
             }),
-        
+            'comments_count' => $this->when(isset($this->all_comments_count), $this->all_comments_count),
             'created_at' => $this->created_at, // Format date,
             'updated_at' => $this->updated_at, // Format date,
             'entries' => $this->whenLoaded('entries', function () {
@@ -44,10 +44,6 @@ class BracketChallengeResource extends JsonResource
             }),
             'entries_count' => $this->when(isset($this->entries_count), $this->entries_count),
             
-            // $this->mergeWhen(Auth::guard('sanctum')->check(), [
-            //     'has_entry' => $this->entries->isNotEmpty(),
-            // ]),
-
             'votes' => [
                 'likes' => $this->when(isset($this->likes_only_count), $this->likes_only_count),
                 'dislikes' => $this->when(isset($this->dislikes_only_count), $this->dislikes_only_count),

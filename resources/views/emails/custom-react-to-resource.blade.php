@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Comment To Entry</title>
+    <title>Verify Your Email Address</title>
     <style>
         /* Add your custom CSS here for styling and responsiveness */
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
@@ -38,7 +38,7 @@
         <div class="content">
             <p>Hello {{ $user }},</p>
             
-            <p>Your bracket challenge entry <strong>{{ $entryName }}</strong> received a new comment from <strong>{{ $sender }}</strong>!</p>
+            <p><strong>{{ $sender }}</strong> replied to your comment.</p>
             
             <div class="button-container">
                 <a href="{{ $url }}" class="button">View Comment</a>

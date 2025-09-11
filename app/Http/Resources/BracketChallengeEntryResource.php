@@ -44,6 +44,10 @@ class BracketChallengeEntryResource extends JsonResource
                 'likes' => $this->when(isset($this->likes_only_count), $this->likes_only_count),
                 'dislikes' => $this->when(isset($this->dislikes_only_count), $this->dislikes_only_count),
             ],
+            'comments' => $this->whenLoaded('comments', function () {
+                return CommentResource::collection($this->comments);
+            }),
+            'comments_count' => $this->when(isset($this->all_comments_count), $this->all_comments_count),
 
             'user_vote' => $this->whenLoaded('myVote', function () {
                 // Check if a vote exists
@@ -54,6 +58,9 @@ class BracketChallengeEntryResource extends JsonResource
                 // Return null if no vote was found for the authenticated user
                 return null;
             }),
+            'rank' => $this->when(isset($this->rank), $this->rank),
+            'is_current_user_entry' => $this->when(isset($this->is_current_user_entry), $this->is_current_user_entry),
+
             
         ];
     }

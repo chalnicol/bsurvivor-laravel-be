@@ -24,6 +24,7 @@ use App\Http\Resources\CommentResource;
 use App\Http\Resources\UserMiniResource;
 
 use App\Notifications\CommentToEntry;
+use App\Notifications\RepliedToComment;
 
 use App\Mail\LeaveMessageMailable; // Your custom mail class 
 
@@ -121,6 +122,7 @@ class PageController extends Controller
         //get is_public and within date range
         $query = BracketChallenge::where('slug', $slug)
             ->where('is_public', true)
+            ->with(['league', 'rounds.matchups.teams'])
             ->withCount(['allComments', 'entries', 'likesOnly', 'dislikesOnly']);
             
         if ($user) {
@@ -130,10 +132,10 @@ class PageController extends Controller
         $bracketChallenge = $query->firstOrFail();
 
         // Eager load all relationships in a single, chained call
-        $bracketChallenge->load([
-            'league',
-            'rounds.matchups.teams',
-        ]);
+        // $bracketChallenge->load([
+        //     'league',
+        //     'rounds.matchups.teams',
+        // ]);
 
         // Conditionally eager load the user's entry using the `with` method
        
@@ -152,7 +154,7 @@ class PageController extends Controller
             'bracketChallenge' => new BracketChallengeResource($bracketChallenge),
             'bracketEntrySlug' => $bracketChallengeEntrySlug,
             'isPast' => $isPast,
-            'totalCommentsCount' => $bracketChallenge->all_comments_count,
+            // 'totalCommentsCount' => $bracketChallenge->all_comments_count,
         ]);
         
     }
@@ -218,6 +220,33 @@ class PageController extends Controller
        
     }
 
+    public function get_entries (Request $request, BracketChallenge $bracketChallenge) {
+
+        $query = $bracketChallenge->entries()
+            ->with('user')
+            ->withCount(['allComments', 'likesOnly', 'dislikesOnly']);
+
+        if ($request->filled('search')) {
+            $searchTerm = '%' . strtolower(trim($request->input('search'))) . '%';
+
+            $query->where(function ($q) use ($searchTerm) {
+                // 1. Search by Bracket Entry Name
+
+                $q->orWhereRaw('LOWER(status) LIKE ?', [$searchTerm]);
+
+                // 2. Search by Username
+                $q->orWhereHas('user', function ($userQuery) use ($searchTerm) {
+                    $userQuery->whereRaw('LOWER(username) LIKE ?', [$searchTerm]);
+                });
+            });
+        }
+
+        $bracketChallengeEntries = $query->orderBy('id', 'desc')->paginate(10);
+
+        return BracketChallengeEntryResource::collection($bracketChallengeEntries);
+
+    }
+
     public function get_all_challenges(Request $request)
     {   
 
@@ -243,17 +272,100 @@ class PageController extends Controller
             });
         }
 
-        $bracketChallengeEntries = $query->orderBy('created_at', 'desc')->paginate(1);
+        $bracketChallengeEntries = $query->orderBy('created_at', 'desc')->paginate(5);
 
         return BracketChallengeResource::collection($bracketChallengeEntries);
 
     }
 
+    // public function get_leaderboard(Request $request, BracketChallenge $bracketChallenge)
+    // {
+
+    //     $user = Auth::guard('sanctum')->user();
+      
+    //     $type = $request->input('type');
+
+    //     if (!$bracketChallenge) {
+    //         return response()->json([
+    //             'message' => 'Bracket challenge not found.',
+    //         ], 404);
+    //     }
+    //     // Base query to get all entries for the challenge
+    //     $query = BracketChallengeEntry::with('user')
+    //         ->where('bracket_challenge_id', $bracketChallenge->id);
+
+    //     // Apply filter for "Friends" leaderboard
+    //     if ($type == 'friends') {
+    //         // Assuming you have a `friends` relationship on your User model
+    //         //$friendIds = $user->friends()->pluck('id')->toArray();
+    //         //$query->whereIn('user_id', $friendIds);
+    //         if (!$user) {
+    //             return response()->json([
+    //                 "message" => 'User not found.'
+    //             ], 404);
+    //         }
+
+    //         $friends = $user->friendsOfMine->merge($user->friendOf);
+    //         $friendIds = $friends->pluck('id')->toArray();
+    //         $query->whereIn('user_id', $friendIds);
+    //     }
+
+    //     // Get the top 10 entries based on the applied filter
+    //     $topEntries = $query->orderByRaw("CASE WHEN status = 'won' THEN 3 WHEN status = 'active' THEN 2 WHEN status = 'eliminated' THEN 1 ELSE 0 END DESC")
+    //         ->orderBy('correct_predictions_count', 'desc')
+    //         ->limit(10)
+    //         ->get();
+
+    //     if ($user) {
+    //         // Fetch the current user's entry (relevant to the applied filter)
+    //         $userEntry = BracketChallengeEntry::where('bracket_challenge_id', $bracketChallenge->id)
+    //             ->where('user_id', $user->id)
+    //             ->with('user')
+    //             ->first();
+            
+    //         // Check if user's entry is not null and not in the top 10 of the filtered list
+    //         if ($userEntry) {
+
+    //             if (!$topEntries->contains('user_id', $user->id)) {
+
+    //                 // Calculate user's rank within the specific leaderboard (Global or Friends)
+    //                 $rankQuery = BracketChallengeEntry::where('bracket_challenge_id', $bracketChallenge->id);
+
+    //                 if ($type == 'friends') {
+    //                     // Filter the rank query by friends only
+    //                     //$friendIds = $user->friends()->pluck('id')->toArray();
+    //                     $friends = $user->friendsOfMine->merge($user->friendOf);
+    //                     $friendIds = $friends->pluck('id')->toArray();
+    //                     $rankQuery->whereIn('user_id', $friendIds);
+    //                 }
+
+    //                 // The rank calculation must also respect the custom sort order
+    //                 $userRank = $rankQuery->orderByRaw("CASE WHEN status = 'won' THEN 3 WHEN status = 'active' THEN 2 WHEN status = 'eliminated' THEN 1 ELSE 0 END DESC")
+    //                     ->orderBy('correct_predictions_count', 'desc')
+    //                     ->get()
+    //                     ->search(function ($item) use ($user) {
+    //                         return $item->user_id == $user->id;
+    //                     }) + 1;
+                    
+    //                 $userEntry->rank = $userRank;
+    //                 $userEntry->is_current_user_entry = true;
+
+    //                 // Add the user's entry to the collection
+    //                 $topEntries->push($userEntry);
+    //             }
+    //         }
+    //     }
+        
+    //     return response()->json([
+    //         'message' => 'Top entries fetched successfully.',
+    //         'id' => $bracketChallenge->id,
+    //         'entries' => BracketChallengeEntryResource::collection($topEntries)
+    //     ]);
+    // }
+
     public function get_leaderboard(Request $request, BracketChallenge $bracketChallenge)
     {
-
         $user = Auth::guard('sanctum')->user();
-      
         $type = $request->input('type');
 
         if (!$bracketChallenge) {
@@ -261,72 +373,66 @@ class PageController extends Controller
                 'message' => 'Bracket challenge not found.',
             ], 404);
         }
-        // Base query to get all entries for the challenge
+
         $query = BracketChallengeEntry::with('user')
             ->where('bracket_challenge_id', $bracketChallenge->id);
 
-        // Apply filter for "Friends" leaderboard
-        if ($type == 'friends') {
-            // Assuming you have a `friends` relationship on your User model
-            //$friendIds = $user->friends()->pluck('id')->toArray();
-            //$query->whereIn('user_id', $friendIds);
+        // Get a list of friend IDs and include the current user's ID
+        $friendIds = collect();
+        if ($type === 'friends') {
             if (!$user) {
-                return response()->json([
-                    "message" => 'User not found.'
-                ], 404);
+                return response()->json(["message" => 'User not found.'], 404);
             }
-
             $friends = $user->friendsOfMine->merge($user->friendOf);
-            $friendIds = $friends->pluck('id')->toArray();
-            $query->whereIn('user_id', $friendIds);
+            $friendIds = $friends->pluck('id');
+            
+            // Add the current user's ID to the list of friends
+            // to ensure they are included in the 'friends' leaderboard filter
+            $friendIds->push($user->id);
+            $query->whereIn('user_id', $friendIds->unique());
         }
 
         // Get the top 10 entries based on the applied filter
-        $topEntries = $query->orderByRaw("CASE WHEN status = 'won' THEN 3 WHEN status = 'active' THEN 2 WHEN status = 'eliminated' THEN 1 ELSE 0 END DESC")
+        $topEntries = $query
+            ->orderByRaw("CASE WHEN status = 'won' THEN 3 WHEN status = 'active' THEN 2 WHEN status = 'eliminated' THEN 1 ELSE 0 END DESC")
             ->orderBy('correct_predictions_count', 'desc')
             ->limit(10)
             ->get();
 
         if ($user) {
-            // Fetch the current user's entry (relevant to the applied filter)
+            // Find the user's entry
             $userEntry = BracketChallengeEntry::where('bracket_challenge_id', $bracketChallenge->id)
                 ->where('user_id', $user->id)
                 ->with('user')
                 ->first();
-            
-            // Check if user's entry is not null and not in the top 10 of the filtered list
-            if ($userEntry) {
 
-                if (!$topEntries->contains('user_id', $user->id)) {
+            // Check if the user's entry is not already in the top 10 results
+            if ($userEntry && !$topEntries->contains('user_id', $user->id)) {
 
-                    // Calculate user's rank within the specific leaderboard (Global or Friends)
-                    $rankQuery = BracketChallengeEntry::where('bracket_challenge_id', $bracketChallenge->id);
+                // Recalculate the rank for the user within the correct filtered set
+                $rankQuery = BracketChallengeEntry::where('bracket_challenge_id', $bracketChallenge->id);
+                if ($type === 'friends') {
+                    $rankQuery->whereIn('user_id', $friendIds);
+                }
 
-                    if ($type == 'friends') {
-                        // Filter the rank query by friends only
-                        //$friendIds = $user->friends()->pluck('id')->toArray();
-                        $friends = $user->friendsOfMine->merge($user->friendOf);
-                        $friendIds = $friends->pluck('id')->toArray();
-                        $rankQuery->whereIn('user_id', $friendIds);
-                    }
-
-                    // The rank calculation must also respect the custom sort order
-                    $userRank = $rankQuery->orderByRaw("CASE WHEN status = 'won' THEN 3 WHEN status = 'active' THEN 2 WHEN status = 'eliminated' THEN 1 ELSE 0 END DESC")
-                        ->orderBy('correct_predictions_count', 'desc')
-                        ->get()
-                        ->search(function ($item) use ($user) {
-                            return $item->user_id == $user->id;
-                        }) + 1;
-                    
+                $rankedEntries = $rankQuery
+                    ->orderByRaw("CASE WHEN status = 'won' THEN 3 WHEN status = 'active' THEN 2 WHEN status = 'eliminated' THEN 1 ELSE 0 END DESC")
+                    ->orderBy('correct_predictions_count', 'desc')
+                    ->get();
+                
+                $userRank = $rankedEntries->search(function ($item) use ($user) {
+                    return $item->user_id === $user->id;
+                }) + 1;
+                
+                // Only push the user's entry if they were found in the list (rank > 0)
+                if ($userRank > 0) {
                     $userEntry->rank = $userRank;
                     $userEntry->is_current_user_entry = true;
-
-                    // Add the user's entry to the collection
                     $topEntries->push($userEntry);
                 }
             }
         }
-        
+
         return response()->json([
             'message' => 'Top entries fetched successfully.',
             'id' => $bracketChallenge->id,
@@ -549,6 +655,23 @@ class PageController extends Controller
 
         // Set the user relationship on the reply to avoid another database query
         $reply->setRelation('user', $user);
+
+        $parentCommentOwner = $parentComment->user;
+
+        $commentable = $parentComment->commentable;
+        $commentableType = get_class($commentable);
+
+        $url = "";
+
+        if ($commentableType === 'App\Models\BracketChallengeEntry' ) {
+            $url = '/bracket-challenge-entries/' . $commentable->slug;
+        } else if ($commentableType === 'App\Models\BracketChallenge') {
+            $url = '/bracket-challenges/' . $commentable->slug;
+        }
+
+        if ($parentCommentOwner && $parentCommentOwner->id !== $user->id) {
+            $parentCommentOwner->notify(new RepliedToComment($parentCommentOwner->id, $user->username, $url));
+        }
 
         return response()->json([
             'message' => 'Reply added successfully.',

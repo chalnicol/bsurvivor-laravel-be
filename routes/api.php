@@ -16,6 +16,8 @@ use App\Http\Controllers\BracketChallengeEntryController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ShareController;
 use App\Http\Controllers\LikeController;
+use App\Http\Controllers\NotificationController;
+use Illuminate\Support\Facades\Broadcast;
 
 // use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
@@ -31,6 +33,9 @@ Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink
 Route::post('/reset-password', [ResetPasswordController::class, 'reset'])->name('password.update');
 
 Route::get('/bracket-challenges', [PageController::class, 'get_all_challenges']);
+
+Route::get('/bracket-challenges/{bracketChallenge}/entries', [PageController::class, 'get_entries']);
+
 
 Route::get('/bracket-challenges/{slug}', [PageController::class, 'get_bracket_challenge']);
 
@@ -60,12 +65,13 @@ Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function 
     Broadcast::routes();
 
     // Route::post('/comments/{likeable}/votes', [LikeController::class, 'toggleVote']);
-    Route::post ('/likes', [LikeController::class, 'toggleVote']);
-    
+    Route::post('/likes', [LikeController::class, 'toggleVote']);
+    // ->middleware('throttle:10,1');
+
     // Route::post('/bracket-challenges/{bracketChallenge}/comments', [PageController::class, 'add_comments_to_challenge']);
 
     Route::post('/{resourceType}/{resourceId}/comments', [PageController::class, 'add_comment'])
-    ->whereIn('resourceType', ['bracket-challenges', 'bracket-challenge-entries']);
+        ->whereIn('resourceType', ['bracket-challenges', 'bracket-challenge-entries']);
 
     Route::put('/comments/{comment}', [PageController::class, 'update_comment']);
 
@@ -73,16 +79,23 @@ Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function 
 
     Route::post('/comments/{parentComment}/replies', [PageController::class, 'add_reply_to_comment']);
 
-    
 
 
-    Route::get('/get-unread-count', [ProfileController::class, 'getUnreadCount']);
+    Route::get('/notifications', [NotificationController::class, 'get_notifications']);
+
+    Route::get('/notifications/get-unread-count', [NotificationController::class, 'getUnreadCount']);
+
+    Route::post('/notifications/delete-all', [NotificationController::class, 'delete_all_notifications']);
+
+    Route::put('/notifications/mark-all-as-read', [NotificationController::class, 'mark_all_as_read']);
+
+
+
 
     Route::get('/search-users', [ProfileController::class, 'search_users']);
 
     Route::get('/get-friends', [ProfileController::class, 'get_friends']);
 
-    Route::get('/get-notifications', [ProfileController::class, 'get_notifications']);
 
     Route::put('/mark-as-read-notification', [ProfileController::class, 'mark_read_notification']);
 
@@ -90,12 +103,13 @@ Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function 
 
     Route::post('/friends-action', [ProfileController::class, 'friends_action']);
 
+
     Route::get('/user/bracket-challenge-entries', [ProfileController::class, 'get_bracket_challenge_entries']);
 
     Route::post('/user/bracket-challenge-entries', [ProfileController::class, 'post_bracket_challenge_entry']);
 
     //auth protected routes..
-    
+
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::get('/user', [AuthController::class, 'user']); // Get authenticated user's details
@@ -106,7 +120,7 @@ Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function 
 
     Route::delete('/user', [AuthController::class, 'delete_account']);
 
-    
+
     Route::group(['middleware' => ['role:admin']], function () {
 
         Route::get('/admin/leagues', [LeagueController::class, 'index']);
@@ -127,7 +141,7 @@ Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function 
         Route::get('/admin/bracket-challenge-entries', [BracketChallengeEntryController::class, 'index']);
         Route::get('/admin/bracket-challenge-entries/{bracketChallengeEntry}', [BracketChallengeEntryController::class, 'show']);
         Route::delete('/admin/bracket-challenge-entries/{bracketChallengeEntry}', [BracketChallengeEntryController::class, 'destroy']);
-      
+
 
         Route::get('/admin/bracket-challenges', [BracketChallengeController::class, 'index']);
         Route::get('/admin/bracket-challenges/{bracketChallenge}', [BracketChallengeController::class, 'show']);
@@ -148,9 +162,5 @@ Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function 
 
         Route::get('/admin/roles', [RoleController::class, 'getAllRoles']);
         Route::get('/admin/roles-with-permissions', [RoleController::class, 'getAllRolesWithPermissions']);
-
     });
-
-   
-
 });

@@ -10,14 +10,15 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use App\Models\User;
 
-class CommentToEntryMailable extends Mailable implements ShouldQueue
+class ReactToResource extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
     public $url;
     public $sender;
     public $user;
-    public $entryName;
+    public $resource;
+
 
     /**
      * Create a new message instance.
@@ -27,11 +28,11 @@ class CommentToEntryMailable extends Mailable implements ShouldQueue
      * @param string $userName (Optional) The user's name, if available
      * @return void
      */
-    public function __construct(string $sender, string $user, string $entryName, string $url)
+    public function __construct(string $sender, string $user, string $resource, string $url)
     {
         $this->sender = $sender;
         $this->user = $user;
-        $this->entryName = $entryName;
+        $this->resource = $resource;
         $this->url = $url;
     }
 
@@ -41,7 +42,7 @@ class CommentToEntryMailable extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: $this->sender .' left a comment on your bracket challenge entry! -' . config('app.name')
+            subject: $this->sender .' liked your ' . $this->resource . '! - ' . config('app.name')
         );
     }
 
@@ -52,11 +53,11 @@ class CommentToEntryMailable extends Mailable implements ShouldQueue
     {
         return new Content(
             // markdown: 'emails.password-reset', // Use a Blade Markdown view
-            view: 'emails.custom-comment-to-entry',
+            view: 'emails.custom-react-to-resource',
             with: [
                 'url' => $this->url,
-                'entryName' => $this->entryName,
                 'user' => $this->user,
+                'resource' => $this->resource,
                 'sender' => $this->sender,
             ]
         );
