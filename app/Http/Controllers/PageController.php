@@ -33,18 +33,21 @@ use Carbon\Carbon;
 class PageController extends Controller
 {
     //
-    public function get_user(string $username) 
+    public function get_user(Request $request) 
     {
+        
+        $username = $request->input('username', '');
 
         $user = User::where('username', $username)->firstOrFail();
 
         $friendshipStatus = "not_authenticated";
 
-        if (Auth::guard('sanctum')->check()) {
+        // if (Auth::guard('sanctum')->check()) {
+        if (Auth::check()) {
 
-            $authUser = Auth::guard('sanctum')->user();
-
-
+            // $authUser = Auth::guard('sanctum')->user();
+            $authUser = Auth::user();
+            
             if ($authUser->id === $user->id) {
                 $friendshipStatus = 'me';
             
@@ -86,7 +89,9 @@ class PageController extends Controller
 
     public function get_bracket_challenge_entry(string $slug) 
     {
-        $user = Auth::guard('sanctum')->user();
+        // $user = Auth::guard('sanctum')->user();
+
+        $user = Auth::user();
 
         //..
         $query = BracketChallengeEntry::where('slug', $slug)
@@ -117,7 +122,12 @@ class PageController extends Controller
     public function get_bracket_challenge(string $slug)
     {
       
-        $user = Auth::guard('sanctum')->user();
+        // $user = Auth::guard('sanctum')->user();
+        $userId = null;
+
+        if (Auth::check()) {
+            $userId = Auth::id();
+        }
 
         //get is_public and within date range
         $query = BracketChallenge::where('slug', $slug)
@@ -125,126 +135,84 @@ class PageController extends Controller
             ->with(['league', 'rounds.matchups.teams'])
             ->withCount(['allComments', 'entries', 'likesOnly', 'dislikesOnly']);
             
-        if ($user) {
-            $query->with('myVote');
+        if ($userId) {
+            $query->with(['entries' => function ($qe) use ($userId) {
+                $qe->where('user_id', $userId);
+            }])
+            ->with('myVote');
         }
 
         $bracketChallenge = $query->firstOrFail();
 
-        // Eager load all relationships in a single, chained call
-        // $bracketChallenge->load([
-        //     'league',
-        //     'rounds.matchups.teams',
-        // ]);
-
-        // Conditionally eager load the user's entry using the `with` method
-       
-        if ($user) {
-            $bracketChallenge->load(['entries' => fn ($query) => $query->where('user_id', $user->id)]);
-        }
-
-        $bracketChallengeEntrySlug = optional($bracketChallenge->entries->first())->slug;
 
         // Simplify the date logic using Carbon's lessThanOrEqualTo method
         // Check if the current date is after the bracket challenge's end date
-        $isPast = $bracketChallenge->end_date->addDay()->isPast();
+        $isPast = $bracketChallenge->end_date->isPast();
 
         return response()->json([
             'message' => 'Bracket Challenge fetched successfully.',
             'bracketChallenge' => new BracketChallengeResource($bracketChallenge),
-            'bracketEntrySlug' => $bracketChallengeEntrySlug,
             'isPast' => $isPast,
             // 'totalCommentsCount' => $bracketChallenge->all_comments_count,
         ]);
         
     }
 
-    public function get_challenges(string $type)
+    public function get_challenges(Request $request)
     {   
+        $request->validate([
+            'status' => 'required|in:active,ongoing'
+        ]);
+        $status = $request->input('status', 'active');
 
-        $now = Carbon::now('UTC')->toDateString();
-        // $now = Carbon::create(2025, 8, 16, 0, 0, 0, 'Asia/Manila');
+        $now = Carbon::now('UTC');
+        // $now = Carbon::create(2025, 9, 13, 9, 0, 0, 'Asia/Manila');
         
-        if ($type === 'active' ) {
+        $query = BracketChallenge::where('is_public', true);
+
+        if ($status === 'active') {
 
             // Initialize userId to null.
             $userId = null;
-            // Check if a user is logged in and get their ID.
 
-            // if (Auth::check()) {
-            if (Auth::guard('sanctum')->check()) {
-                // $userId = Auth::id();
-                $userId = Auth::guard('sanctum')->id();
+            // Check if a user is logged in and get their ID.
+            // if (Auth::guard('sanctum')->check()) {
+            //     $userId = Auth::guard('sanctum')->id();
+            // }
+            if (Auth::check()) {
+                $userId = Auth::id();
             }
 
-            $bracketChallenges = BracketChallenge::with('league')
-                ->where('is_public', true)
+            $query->with('league')
+                // ->when($userId, function ($q, $userId) {
+                //     $q->with(['entries' => function ($qe) use ($userId) {
+                //         $qe->where('user_id', $userId);
+                //     }]);
+                // })
                 ->where('start_date', '<=',  $now)
-                ->where('end_date', '>=',  $now)
-                // // Conditionally eager load the entries if a user is authenticated.
-                ->when($userId, function ($query, $userId) {
-                    $query->with(['entries' => function ($query) use ($userId) {
-                        $query->where('user_id', $userId);
-                    }]);
-                })
-                ->orderBy('id', 'desc')
-                ->limit(3)
-                ->get();
+                ->where('end_date', '>=',  $now);
 
-            return response()->json([
-                'message' => 'Challenges fetched successfully!',
-                'challenges' => BracketChallengeResource::collection($bracketChallenges)
-            ]);
+        }else if ($status == 'ongoing') {
 
-        }else {
-
-            //..
-            $bracketChallenges = BracketChallenge::with(['entries' => function ($query) {
-                $query->with('user')
+            $query->with(['entries' => function ($q) {
+                $q->with('user')
                     ->orderBy('correct_predictions_count', 'desc')
-                    ->limit(10);
+                    ->limit(8);
             }])
-                ->where('is_public', true)
-                ->where('end_date', '<', $now)
-                ->orderBy('id', 'desc')
-                ->limit(3)
-                ->get();
-
-            return response()->json([
-                'message' => "Bracket challenges fetched successfully",
-                'challenges' => BracketChallengeResource::collection($bracketChallenges)
-            ]);
+            ->where('end_date', '<', $now);
         }
+
+        $bracketChallenges = $query->orderBy('id', 'desc')
+            ->limit(3)
+            ->get();
+
+        return response()->json([
+            'message' => 'Challenges fetched successfully!',
+            'challenges' => BracketChallengeResource::collection($bracketChallenges)
+        ]);
         
 
        
-    }
-
-    public function get_entries (Request $request, BracketChallenge $bracketChallenge) {
-
-        $query = $bracketChallenge->entries()
-            ->with('user')
-            ->withCount(['allComments', 'likesOnly', 'dislikesOnly']);
-
-        if ($request->filled('search')) {
-            $searchTerm = '%' . strtolower(trim($request->input('search'))) . '%';
-
-            $query->where(function ($q) use ($searchTerm) {
-                // 1. Search by Bracket Entry Name
-
-                $q->orWhereRaw('LOWER(status) LIKE ?', [$searchTerm]);
-
-                // 2. Search by Username
-                $q->orWhereHas('user', function ($userQuery) use ($searchTerm) {
-                    $userQuery->whereRaw('LOWER(username) LIKE ?', [$searchTerm]);
-                });
-            });
-        }
-
-        $bracketChallengeEntries = $query->orderBy('id', 'desc')->paginate(10);
-
-        return BracketChallengeEntryResource::collection($bracketChallengeEntries);
-
     }
 
     public function get_all_challenges(Request $request)
@@ -272,9 +240,37 @@ class PageController extends Controller
             });
         }
 
-        $bracketChallengeEntries = $query->orderBy('created_at', 'desc')->paginate(5);
+        $bracketChallengeEntries = $query->orderBy('id', 'desc')->paginate(5);
 
         return BracketChallengeResource::collection($bracketChallengeEntries);
+
+    }
+
+    public function get_entries (Request $request, BracketChallenge $bracketChallenge) 
+    {
+
+        $query = $bracketChallenge->entries()
+            ->with('user')
+            ->withCount(['allComments', 'likesOnly', 'dislikesOnly']);
+
+        if ($request->filled('search')) {
+            $searchTerm = '%' . strtolower(trim($request->input('search'))) . '%';
+
+            $query->where(function ($q) use ($searchTerm) {
+                // 1. Search by Bracket Entry Name
+
+                $q->orWhereRaw('LOWER(status) LIKE ?', [$searchTerm]);
+
+                // 2. Search by Username
+                $q->orWhereHas('user', function ($userQuery) use ($searchTerm) {
+                    $userQuery->whereRaw('LOWER(username) LIKE ?', [$searchTerm]);
+                });
+            });
+        }
+
+        $bracketChallengeEntries = $query->orderBy('id', 'desc')->paginate(10);
+
+        return BracketChallengeEntryResource::collection($bracketChallengeEntries);
 
     }
 
@@ -365,7 +361,9 @@ class PageController extends Controller
 
     public function get_leaderboard(Request $request, BracketChallenge $bracketChallenge)
     {
-        $user = Auth::guard('sanctum')->user();
+        // $user = Auth::guard('sanctum')->user();
+        $user = Auth::user();
+
         $type = $request->input('type');
 
         if (!$bracketChallenge) {
@@ -480,7 +478,9 @@ class PageController extends Controller
         $perPage = 10;
         $page = $request->query('page', 1); 
 
-        $user = Auth::guard('sanctum')->user();
+        // $user = Auth::guard('sanctum')->user();
+        $user = Auth::user();
+
         $userId = $user ? $user->id : 0;
 
         $query = $commentsQuery
@@ -563,7 +563,8 @@ class PageController extends Controller
             'updatedBody' => 'required|string|max:255'
         ]);
 
-        $user = Auth::guard('sanctum')->user();
+        // $user = Auth::guard('sanctum')->user();
+        $user = Auth::user();
 
         if ($comment->user_id !== $user->id) {
             return response()->json([
@@ -586,7 +587,8 @@ class PageController extends Controller
 
     public function delete_comment(Comment $comment)
     {
-        $user = Auth::guard('sanctum')->user();
+        // $user = Auth::guard('sanctum')->user();
+        $user = Auth::user();
 
         if ($comment->user_id !== $user->id) {
             return response()->json([
@@ -606,7 +608,9 @@ class PageController extends Controller
         $perPage = 5; // Number of comments per page
         $page = $request->query('page', 1); 
 
-        $user = Auth::guard('sanctum')->user();
+        // $user = Auth::guard('sanctum')->user();
+        $user = Auth::user();
+
         $userId = $user ? $user->id : 0; // Use a default value if no user is authenticated
 
         // $replies = $parentComment->replies()
@@ -643,7 +647,8 @@ class PageController extends Controller
             'body' => 'required|string|max:255'
         ]);
 
-        $user = Auth::guard('sanctum')->user();
+        // $user = Auth::guard('sanctum')->user();
+        $user = Auth::user();
 
         // A reply needs the same commentable_id and type as its parent
         $reply = $parentComment->replies()->create([

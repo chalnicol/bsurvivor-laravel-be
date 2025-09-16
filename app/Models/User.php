@@ -43,7 +43,9 @@ class User extends Authenticatable
         'email',
         'password',
         'is_blocked',
+        'firebase_uid',
         'email_verification_token',
+        'email_verified_at',
         'token_expires_at'
     ];
 

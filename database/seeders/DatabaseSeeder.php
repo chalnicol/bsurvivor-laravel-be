@@ -27,6 +27,6 @@ class DatabaseSeeder extends Seeder
         // bracket challenges..
         $this->call(BracketChallengeSeeder::class);
         // bracket challenge entries..
-        // $this->call(BracketChallengeEntrySeeder::class);
+        $this->call(BracketChallengeEntrySeeder::class);
     }
 }

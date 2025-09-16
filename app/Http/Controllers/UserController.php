@@ -112,10 +112,48 @@ class UserController extends Controller
         ], 200); // 200 OK
     }
 
-    public function updateUserRoles (Request $request, User $user) 
+    // public function updateUserRoles (Request $request, User $user) 
+    // {
+
+    //     //..
+    //     $role = Role::where('name', $request->role)->first();
+
+    //     if (!$role) {
+    //         return response()->json(['message' => 'Role not found'], 404);
+    //     }
+
+    //     $message = "";
+
+    //     if ($user->hasRole($request->role, 'web')) {
+
+    //         if ( $role->name === 'admin' && $user->id === Auth::id()) {
+    //             return response()->json([
+    //                 'message' => 'You cannot remove your own admin role.'
+    //             ], 403);
+    //         }
+
+    //         $user->removeRole($request->role, 'web');
+
+    //         $message = ucfirst($request->role) . ' role removed successfully!';
+
+    //     } else {
+    //         $user->assignRole($request->role, 'web');
+            
+    //         $message = ucfirst($request->role) . ' role assigned successfully!';
+    //     }
+
+    //     $user->load('roles');
+
+    //     return response()->json([
+    //         'message' => $message,
+    //         'user' => new UserResource($user) // Or a UserResource of the user
+    //     ]);
+            
+    // } 
+
+    public function updateUserRoles(Request $request, User $user)
     {
 
-        //..
         $role = Role::where('name', $request->role)->first();
 
         if (!$role) {
@@ -124,21 +162,19 @@ class UserController extends Controller
 
         $message = "";
 
-        if ($user->hasRole($request->role)) {
-
-            if ( $role->name === 'admin' && $user->id === Auth::id()) {
+        // Add the 'web' guard here for both methods
+        if ($user->hasRole($request->role, 'web')) {
+            if ($role->name === 'admin' && $user->id === Auth::id()) {
                 return response()->json([
                     'message' => 'You cannot remove your own admin role.'
                 ], 403);
             }
-
-            $user->removeRole($request->role);
-
-            $message = ucfirst($request->role) . ' role removed successfully!';
-
-        } else {
-            $user->assignRole($request->role);
             
+            $user->removeRole($request->role, 'web'); // <-- Add 'web' guard here
+            $message = ucfirst($request->role) . ' role removed successfully!';
+        } else {
+
+            $user->assignRole($request->role, 'web'); // <-- Add 'web' guard here
             $message = ucfirst($request->role) . ' role assigned successfully!';
         }
 
@@ -146,10 +182,9 @@ class UserController extends Controller
 
         return response()->json([
             'message' => $message,
-            'user' => new UserResource($user) // Or a UserResource of the user
+            'user' => new UserResource($user)
         ]);
-            
-    } 
+    }
 
     
 

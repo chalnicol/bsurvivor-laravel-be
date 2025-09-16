@@ -24,13 +24,13 @@ class BracketEntryUpdatedMailable extends Mailable
      * @param string $userName (Optional) The user's name, if available
      * @return void
      */
-    public function __construct(string $userName, string $challengeName, string $entryUrl,)
+    public function __construct(string $userName, string $challengeName, string $url)
     {
         // Construct the frontend reset URL
         // Ensure config('app.frontend_url') is set in .env and config/app.php
         //$this->entry = config('app.frontend_url') . '/reset-password?token=' . $resetToken . '&email=' . urlencode($userEmail);
         $this->userName = $userName; // Default to 'User' if name is not provided
-        $this->entryUrl = $entryUrl;
+        $this->url = $url;
         $this->challengeName = $challengeName;
     }
 
@@ -56,7 +56,7 @@ class BracketEntryUpdatedMailable extends Mailable
             // markdown: 'emails.password-reset', // Use a Blade Markdown view
             view: 'emails.custom-bracket-update',
             with: [
-                'entryUrl' => $this->entryUrl,
+                'url' => $this->url,
                 'userName' => $this->userName,
                 'challengeName' => $this->challengeName,
             ]

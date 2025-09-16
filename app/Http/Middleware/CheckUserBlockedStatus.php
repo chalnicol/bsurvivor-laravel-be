@@ -19,8 +19,8 @@ class CheckUserBlockedStatus
         // return $next($request);
         if (Auth::check() && Auth::user()->isBlocked()) {
             Auth::logout(); // Log them out
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
+            // $request->session()->invalidate();
+            // $request->session()->regenerateToken();
 
             return response()->json([
                 'message' => 'Your account has been blocked. You have been logged out.'

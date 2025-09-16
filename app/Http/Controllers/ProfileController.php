@@ -9,8 +9,6 @@ use Illuminate\Support\Facades\Auth; // Import Auth facade
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail; 
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Notifications\DatabaseNotification;
 
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -42,7 +40,9 @@ class ProfileController extends Controller
         //     $user = Auth::guard('sanctum')->user;
         // }
 
-        $user = Auth::guard('sanctum')->user();
+        // $user = Auth::guard('sanctum')->user();
+        $user = Auth::user();
+
 
         if (!$user) {
             return response()->json([
@@ -86,8 +86,9 @@ class ProfileController extends Controller
     {
 
 
-        $userId =  Auth::guard('sanctum')->id();
-       
+        // $userId =  Auth::guard('sanctum')->id();
+        $userId =  Auth::id();
+
         $bracketChallengeId = $request->input('bracket_challenge_id');
 
         // Get the current time for precise comparison
@@ -405,40 +406,6 @@ class ProfileController extends Controller
             'users' => $mappedUsers,
         ]);
     }
-
-   
-
-   
-
-
-
-
-    public function mark_read_notification (Request $request)
-    {
-        // Validate the request to ensure a notification ID is present
-        $request->validate([
-            'notification_id' => 'required|string',
-        ]);
-
-        $notification = DatabaseNotification::find($request->input('notification_id'));
-        
-        // Check if the notification exists and belongs to the authenticated user for security
-        if (!$notification || $notification->notifiable_id != Auth::id()) {
-            return response()->json(['message' => 'Notification not found or unauthorized.'], 404);
-        }
-        
-        $notification->markAsRead();
-        
-        return response()->json(['message' => 'Notification marked as read.'], 200);
-    }
-
-    public function delete_notification (DatabaseNotification $notification)
-    {
-        $notification->delete();
-        return response()->json(['message' => 'Notification deleted successfully.'], 200);
-    }
-
-   
 
 }
 

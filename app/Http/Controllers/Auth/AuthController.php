@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource; 
@@ -25,6 +25,8 @@ use App\Notifications\VerifyEmailNotification;
 use App\Notifications\EmailVerifiedNotification;
 use App\Notifications\PasswordResetSuccess;
 
+use Kreait\Firebase\Auth as FirebaseAuth;
+
 
 class AuthController extends Controller
 {
@@ -32,12 +34,13 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            'username' => 'required|string|max:15|min:5|alpha_dash|unique:users',
-            'fullname' => 'required|string|min:5|max:255|regex:/^[-a-zA-Z0-9_ ]+$/',
+            'username' => 'required|string|max:15|min:5|alpha_num|regex:/[a-zA-Z]/|unique:users',
+            'fullname' => 'required|string|min:5|max:255|regex:/^[a-zA-Z0 ]+$/',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', // 'confirmed' checks for password_confirmation field
         ], [
-            'username.alpha_dash' => 'Invalid username format. Please check rules and try again.',
+            'username.alpha_num' => 'Invalid username format. Please check rules and try again.',
+            'username.regex' => 'Invalid username format. Please check rules and try again.',
             'fullname.regex' => 'Invalid Full Name format. Please check rules and try again.'
         ]);
 
@@ -153,6 +156,39 @@ class AuthController extends Controller
                 'message' => 'Too many login attempts. Please try again in ' . $seconds . ' seconds.'
             ], 429);
         }
+        
+        // 3. Find the user by email
+        $user = User::where('email', $request->email)->first();
+
+        if ($user && is_null($user->password)) {
+            RateLimiter::hit($throttleKey, $decayMinutes * 60);
+            throw ValidationException::withMessages([
+                'email' => ['This account is a social-only login. Please use your social account to log in.'],
+            ]);
+        }
+
+        if ($user && $user->isBlocked()) {
+            RateLimiter::hit($throttleKey, $decayMinutes * 60);
+            throw ValidationException::withMessages([
+                'email' => ['Your account has been blocked. Please contact support.'],
+            ]);
+        }
+
+        if ($user && !$user->hasVerifiedEmail()) {
+            RateLimiter::hit($throttleKey, $decayMinutes * 60);
+            $user->email_verification_token = Str::random(60);
+            $user->token_expires_at = now()->addDay();
+            $user->save();
+
+            $user->notify(new VerifyEmailNotification());
+            
+            // No need to log out, as the user has not been authenticated yet.
+            session()->put('pending_email_verification', $user->email);
+            throw ValidationException::withMessages([
+                'email' => 'Unverified email. A verification link has been sent to your email.'
+            ]);
+        }
+
 
         // 3. Attempt to authenticate the user
         if (!Auth::attempt($request->only('email', 'password'))) {
@@ -163,19 +199,9 @@ class AuthController extends Controller
             ]);
         }
 
-        // 4. Get the authenticated user
+        // 7. Get the authenticated user
         $user = $request->user();
-
-        // Check if the authenticated user is blocked
-        if ($user->isBlocked()) {
-            Auth::guard('web')->logout();
-            // $request->session()->invalidate();
-            // Log out the blocked user
-            return response()->json([
-                'message' => 'Your account has been blocked. Please contact support.'
-            ], 403);
-        }
-
+       
         if (!$user->hasVerifiedEmail()) {
 
             $user->email_verification_token = Str::random(60);
@@ -231,9 +257,13 @@ class AuthController extends Controller
         $user = $request->user(); // Get the authenticated user
 
         $request->validate([
-            'username' => 'required|string||max:15|min:5|alpha_dash|unique:users,username,' . $user->id,
-            'fullname' => 'required|string|max:255|regex:/^[-a-zA-Z0-9_ ]+$/',
+            'username' => 'required|string|max:15|min:5|alpha_num|regex:/[a-zA-Z]/|unique:users,username,' . $user->id,
+            'fullname' => 'required|string|min:5|max:255|regex:/^[a-zA-Z0-9 ]+$/',
             'email' => 'required|string|email|max:255|unique:users,email,'. $user->id,
+        ], [
+            'username.alpha_num' => 'Invalid username format. Please check rules and try again.',
+            'username.regex' => 'Invalid username format. Please check rules and try again.',
+            'fullname.regex' => 'Invalid Full Name format. Please check rules and try again.'
         ]);
 
        

@@ -62,12 +62,20 @@
             }
             p.value {
                 margin: 3px 0;
-                padding: 5px 0;
+                padding: 5px;
                 font-size: 0.9rem;
-                border-top: 1px solid #1f2937;
+                background-color: #1f2937;
+                color: white;
+                border-radius: 3px;
             }
             .detail {
                 margin: 10px 0;
+            }
+            .body {
+                border: 1px solid #9c9c9c;
+                padding: 5px;
+                border-radius: 5px;
+                background-color: #e3e3e3;
             }
         </style>
     </head>
@@ -77,14 +85,13 @@
                 <h1>{{ config('app.name') }}</h1>
             </div>
             <div class="content">
-                <p>{!! nl2br(e($userMessage)) !!}</p>
-
+                <p class="body">{!! nl2br(e($userMessage)) !!}</p>
                 <div class="detail">
-                    <p class="title">Message from:</p>
+                    <p class="title">Message from :</p>
                     <p class="value">{{ $sender }}</p>
                 </div>
                 <div class="detail">
-                    <p class="title">Email:</p>
+                    <p class="title">Email :</p>
                     <p class="value">{{ $email }}</p>
                 </div>
             </div>

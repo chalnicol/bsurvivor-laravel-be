@@ -34,7 +34,7 @@ class PasswordResetSuccess extends Notification implements ShouldQueue, ShouldBr
      */
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast', 'mail'];
+        return ['database', 'mail'];
     }
 
     public function broadcastOn(): array

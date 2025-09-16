@@ -24,6 +24,7 @@ class UserResource extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'is_blocked' => (bool) $this->is_blocked, 
+            'social_user' => (bool) $this->firebase_uid != null,
             // Include roles and permissions
             'roles' => $this->whenLoaded('roles', function () {
                 return $this->roles->pluck('name'); // Just send role names
