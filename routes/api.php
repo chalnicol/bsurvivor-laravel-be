@@ -117,7 +117,7 @@ Route::middleware(['auth:sanctum', 'user.blocked', 'verified'])->group(function 
 
     Route::get('/user/friends', [ProfileController::class, 'get_friends']);
 
-    Route::post('/user/friends', [ProfileController::class, 'friends_action']);
+    Route::post('/user/friends', [ProfileController::class, 'friends_action'])->middleware('throttle:6,1');;
 
     Route::get('/user/bracket-challenge-entries', [ProfileController::class, 'get_bracket_challenge_entries']);
 
